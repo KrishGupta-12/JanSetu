@@ -22,6 +22,8 @@ export type Report = {
   imageUrl: string;
   reportDate: string; // ISO string
   status: ReportStatus;
+  assignedAdminId?: string;
+  assignedAdminName?: string;
 };
 
 export type AqiSensor = {
@@ -36,6 +38,7 @@ export type AqiSensor = {
 
 export type Citizen = {
     id: string;
+    janId: string;
     name: string;
     email: string;
     phone: string;
@@ -44,4 +47,19 @@ export type Citizen = {
     address?: string;
     city?: string;
     state?: string;
+}
+
+export enum AdminRole {
+    SuperAdmin = 'super_admin',
+    DepartmentAdmin = 'department_admin'
+}
+
+export type Admin = {
+    id: string;
+    janId: string;
+    name: string;
+    email: string;
+    role: AdminRole;
+    department?: ReportCategory; // Department admins are linked to a report category
+    dateJoined: string; // ISO string
 }

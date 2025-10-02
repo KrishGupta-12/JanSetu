@@ -4,10 +4,10 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc } from 'firebase/firestore';
+import { doc, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Report, ReportStatus } from '@/lib/types';
+import { Report, ReportStatus, Admin as AdminType, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText } from 'lucide-react';
 
@@ -21,12 +21,18 @@ export default function AdminDashboardPage() {
     return doc(firestore, 'admins', user.uid);
   }, [firestore, user]);
 
-  const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
+  const { data: adminData, isLoading: isAdminLoading } = useDoc<AdminType>(adminRef);
 
   const reportsQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return collection(firestore, 'issue_reports');
-  }, [firestore]);
+      if (!firestore || !adminData) return null;
+      if (adminData.role === AdminRole.SuperAdmin) {
+        // Super admin sees all reports
+        return collection(firestore, 'issue_reports');
+      } else {
+        // Department admin sees only reports assigned to them
+        return query(collection(firestore, 'issue_reports'), where('assignedAdminId', '==', user?.uid));
+      }
+  }, [firestore, adminData, user?.uid]);
 
   const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
@@ -71,7 +77,12 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-headline font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage and track all citizen reports.</p>
+        <p className="text-muted-foreground">
+          {adminData.role === AdminRole.SuperAdmin 
+            ? "Manage all citizen reports and assign them to departments." 
+            : `Manage reports for the ${adminData.department} department.`
+          }
+        </p>
       </div>
 
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -113,7 +124,7 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      <ReportTable reports={reports || []} />
+      <ReportTable reports={reports || []} admin={adminData} />
     </div>
   );
 }

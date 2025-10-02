@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
@@ -36,6 +36,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -48,10 +49,9 @@ export function LoginForm() {
   });
   
   useEffect(() => {
-    if (auth.currentUser) {
-      // Check if user is admin on initial load
-      const checkAdminStatus = async () => {
-        const adminRef = doc(firestore, 'admins', auth.currentUser!.uid);
+    if (!isUserLoading && user) {
+       const checkAdminStatus = async () => {
+        const adminRef = doc(firestore, 'admins', user.uid);
         const adminSnap = await getDoc(adminRef);
         if (adminSnap.exists()) {
           router.push('/admin');
@@ -61,16 +61,16 @@ export function LoginForm() {
       };
       checkAdminStatus();
     }
-  }, [auth.currentUser, router, firestore]);
+  }, [user, isUserLoading, router, firestore]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
+      const loggedInUser = userCredential.user;
 
       // Check if the user is an admin
-      const adminRef = doc(firestore, 'admins', user.uid);
+      const adminRef = doc(firestore, 'admins', loggedInUser.uid);
       const adminSnap = await getDoc(adminRef);
 
       if (adminSnap.exists()) {

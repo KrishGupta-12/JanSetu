@@ -17,6 +17,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -39,15 +42,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Loader2, Sparkles, Eye } from 'lucide-react';
-import type { Report } from '@/lib/types';
-import { ReportStatus } from '@/lib/types';
+import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck } from 'lucide-react';
+import type { Report, Admin } from '@/lib/types';
+import { ReportStatus, AdminRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { updateDoc } from 'firebase/firestore';
-import { doc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { doc, serverTimestamp, collection } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -55,7 +58,7 @@ const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Resolved]: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
 };
 
-export default function ReportTable({ reports }: { reports: Report[] }) {
+export default function ReportTable({ reports, admin }: { reports: Report[], admin: Admin }) {
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
@@ -64,6 +67,12 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
   
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const adminsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'admins');
+  }, [firestore]);
+  const { data: allAdmins } = useCollection<Admin>(adminsQuery);
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
     if(!firestore) return;
@@ -76,6 +85,30 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
     toast({
       title: 'Status Updated',
       description: `Report status changed to ${status}.`
+    });
+  }
+
+  const handleAssignAdmin = (reportId: string, admin: Admin) => {
+    if(!firestore) return;
+    const reportRef = doc(firestore, 'issue_reports', reportId);
+    updateDoc(reportRef, { 
+      assignedAdminId: admin.id,
+      assignedAdminName: admin.name,
+      status: ReportStatus.InProgress, 
+      updatedAt: serverTimestamp() 
+    });
+
+    const userReportRef = doc(firestore, `users/${reports.find(r => r.id === reportId)?.citizenId}/issue_reports`, reportId);
+    updateDoc(userReportRef, { 
+      assignedAdminId: admin.id,
+      assignedAdminName: admin.name,
+      status: ReportStatus.InProgress,
+      updatedAt: serverTimestamp()
+     });
+
+     toast({
+      title: 'Report Assigned',
+      description: `Report has been assigned to ${admin.name}.`
     });
   }
 
@@ -105,15 +138,19 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>All Reports</CardTitle>
-          <Button onClick={handleGenerateSummary} disabled={isSummaryLoading}>
-            {isSummaryLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            Generate Summary
-          </Button>
+          <CardTitle>
+            {admin.role === AdminRole.SuperAdmin ? 'All Reports' : 'Assigned Reports'}
+          </CardTitle>
+          {admin.role === AdminRole.SuperAdmin && (
+            <Button onClick={handleGenerateSummary} disabled={isSummaryLoading}>
+              {isSummaryLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Generate Summary
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
@@ -123,6 +160,7 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                   <TableHead>ID</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Reported On</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -134,6 +172,7 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                     <TableCell className="font-medium">{report.id.substring(0, 7)}...</TableCell>
                     <TableCell>{report.category}</TableCell>
                     <TableCell className="max-w-xs truncate">{report.description}</TableCell>
+                    <TableCell>{report.assignedAdminName || 'Unassigned'}</TableCell>
                     <TableCell>
                       <Badge className={cn('font-semibold', statusStyles[report.status])}>
                         {report.status}
@@ -157,8 +196,26 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.InProgress)}>Mark as In Progress</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.Resolved)}>Mark as Resolved</DropdownMenuItem>
+                          {admin.role === AdminRole.SuperAdmin ? (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                Assign To
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                {allAdmins?.filter(a => a.role === AdminRole.DepartmentAdmin).map(deptAdmin => (
+                                  <DropdownMenuItem key={deptAdmin.id} onClick={() => handleAssignAdmin(report.id, deptAdmin)}>
+                                    {deptAdmin.name} ({deptAdmin.department})
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          ) : (
+                            <>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.InProgress)}>Mark as In Progress</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.Resolved)}>Mark as Resolved</DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -208,6 +265,10 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                      <div className="grid grid-cols-4 items-start gap-4">
                        <p className="col-span-1 text-sm font-medium text-muted-foreground pt-1">Description</p>
                        <p className="col-span-3 text-sm">{selectedReport.description}</p>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                       <p className="col-span-1 text-sm font-medium text-muted-foreground">Assigned To</p>
+                       <p className="col-span-3 text-sm">{selectedReport.assignedAdminName || 'Unassigned'}</p>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                        <p className="col-span-1 text-sm font-medium text-muted-foreground">Location</p>

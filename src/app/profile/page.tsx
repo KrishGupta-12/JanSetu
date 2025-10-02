@@ -76,6 +76,10 @@ export default function ProfilePage() {
                  <Skeleton className="h-4 w-2/3" />
             </CardHeader>
             <CardContent className="space-y-6">
+                 <div className="space-y-2">
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-1/4" />
                   <Skeleton className="h-10 w-full" />
@@ -115,7 +119,7 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
           <CardDescription>
-            Update your personal information.
+            Update your personal information. Your unique JanSetu ID is <strong>{userProfile.janId}</strong>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
