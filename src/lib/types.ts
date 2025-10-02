@@ -10,6 +10,7 @@ export enum ReportStatus {
   Pending = 'Pending',
   InProgress = 'In Progress',
   Resolved = 'Resolved',
+  Rejected = 'Rejected',
 }
 
 export type Report = {

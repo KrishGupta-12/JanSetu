@@ -34,7 +34,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -42,7 +41,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck } from 'lucide-react';
+import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX } from 'lucide-react';
 import type { Report, Admin } from '@/lib/types';
 import { ReportStatus, AdminRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -55,6 +54,7 @@ const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
   [ReportStatus.InProgress]: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
   [ReportStatus.Resolved]: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
+  [ReportStatus.Rejected]: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
 };
 
 export default function ReportTable({ reports: initialReports, admin }: { reports: Report[], admin: Admin }) {
@@ -195,6 +195,10 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                             <>
                               <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.InProgress)}>Mark as In Progress</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.Resolved)}>Mark as Resolved</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleUpdateStatus(report.id, ReportStatus.Rejected)}>
+                                <ShieldX className="mr-2 h-4 w-4" />
+                                Mark as Rejected
+                              </DropdownMenuItem>
                             </>
                           )}
                         </DropdownMenuContent>
@@ -228,9 +232,9 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                 <>
                 <DialogHeader>
                     <DialogTitle>Report Details</DialogTitle>
-                    <DialogDescription>
+                    <p className="text-sm text-muted-foreground pt-1">
                         Full details for report ID {selectedReport.id.substring(0,7)}.
-                     </DialogDescription>
+                     </p>
                      <Badge className={cn('font-semibold !mt-2 w-fit', statusStyles[selectedReport.status])}>
                         {selectedReport.status}
                     </Badge>
