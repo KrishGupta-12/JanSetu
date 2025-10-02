@@ -38,8 +38,8 @@ const features = [
   },
   {
     icon: <Bell className="h-10 w-10 text-primary" />,
-    title: 'Disaster Alerts',
-    description: 'Receive timely, location-aware alerts about local emergencies and potential disasters to ensure your safety.',
+    title: 'Platform-wide Alerts',
+    description: 'Administrators can broadcast important announcements, such as health advisories or service disruptions, to all users of the platform.',
   },
 ];
 
