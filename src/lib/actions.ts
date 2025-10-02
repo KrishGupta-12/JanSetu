@@ -82,7 +82,7 @@ export async function submitReport(
     await setDoc(doc(firestore, 'issue_reports', newReportRef.id), { id: newReportRef.id }, { merge: true });
 
     const userIssueReportRef = doc(firestore, `users/${citizenId}/issue_reports`, newReportRef.id);
-    await setDoc(userIssueReportRef, { ...reportData, id: newReport_ref.id });
+    await setDoc(userIssueReportRef, { ...reportData, id: newReportRef.id });
 
 
     return {
