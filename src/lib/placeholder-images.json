@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "report-placeholder",
+      "description": "A placeholder for user-uploaded issue photos.",
+      "imageUrl": "https://images.unsplash.com/photo-1626247103090-b81889531015?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FtZXJhJTIwcGxhY2Vob2xkZXJ8ZW58MHx8fHwxNzU5Mzg0OTE2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "camera placeholder"
+    }
+  ]
 }
