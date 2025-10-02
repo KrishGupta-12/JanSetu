@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ReportStatus } from '@/lib/types';
 import { mockReports, mockAdmins } from '@/lib/data';
-import { Files } from 'lucide-react';
+import { Files, Megaphone, Trophy } from 'lucide-react';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -60,10 +60,10 @@ export default function DashboardPage() {
 
   if (isUserLoading || !user || isAdmin) {
     return (
-       <div className="flex-1 w-full p-4 sm:p-6">
-        <div className="container mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
+       <div className="flex-1 w-full">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
             <div className="xl:col-span-8">
-                <Skeleton className="h-[400px] xl:h-[calc(100vh-10rem)] w-full rounded-xl" />
+                <Skeleton className="h-[400px] xl:h-[calc(100vh-4rem)] w-full rounded-xl" />
             </div>
             <div className="xl:col-span-4 flex flex-col gap-6">
                 <Skeleton className="h-[180px] w-full rounded-xl" />
@@ -77,14 +77,45 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 w-full relative">
-      <div className="container mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6 p-4 sm:p-6 h-full">
-        <div className="xl:col-span-8 rounded-xl shadow-lg overflow-hidden h-[400px] xl:h-auto flex flex-col bg-card">
+       <div className="space-y-6">
+        <div>
+            <h1 className="text-3xl font-headline font-bold tracking-tight">Citizen Dashboard</h1>
+            <p className="text-muted-foreground">
+              Welcome back, {user.name}! Here's what's happening in your city.
+            </p>
+        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
+        <div className="xl:col-span-7 rounded-xl shadow-lg overflow-hidden h-[400px] xl:h-[600px] flex flex-col bg-card">
           <MapProvider>
-            <MapView />
+            <MapView reports={mockReports} />
           </MapProvider>
         </div>
-        <div className="xl:col-span-4 flex flex-col gap-6">
+        <div className="xl:col-span-5 flex flex-col gap-6">
           <AqiCard />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Trophy className="text-yellow-500" /> Leaderboard</CardTitle>
+                    <CardDescription>See top community contributors.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Button asChild className="w-full">
+                    <Link href="/dashboard/leaderboard">View Leaderboard</Link>
+                </Button>
+                </CardContent>
+            </Card>
+             <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Megaphone /> Community Feed</CardTitle>
+                    <CardDescription>View live reports from citizens.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Button asChild className="w-full">
+                    <Link href="/dashboard/feed">View Feed</Link>
+                </Button>
+                </CardContent>
+            </Card>
+          </div>
            <Card className="flex-1 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
@@ -98,7 +129,7 @@ export default function DashboardPage() {
             <CardContent>
                 {userReports && userReports.length > 0 ? (
                     <ul className="space-y-3">
-                        {userReports.slice(0,3).map(report => (
+                        {userReports.slice(0,2).map(report => (
                             <li key={report.id} className="flex justify-between items-center text-sm">
                                 <span className="truncate pr-4">{report.description}</span>
                                 <Badge className={cn('font-semibold', statusStyles[report.status])}>
@@ -112,20 +143,10 @@ export default function DashboardPage() {
                 )}
             </CardContent>
           </Card>
-          <Card className="flex-1 shadow-lg">
-            <CardHeader>
-              <CardTitle>Community Action</CardTitle>
-              <CardDescription>Found an issue? Let us know.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full" size="lg">
-                <Link href="/report">Report an Issue</Link>
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
       <DisasterAlert />
+      </div>
     </div>
   );
 }
