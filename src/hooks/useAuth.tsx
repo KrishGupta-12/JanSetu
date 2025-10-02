@@ -16,13 +16,21 @@ const demoAdmins: {[email: string]: AdminCredential} = {
     'streetlight.admin@jancorp.com': { role: AdminRole.DepartmentAdmin, department: ReportCategory.Streetlight },
 };
 
+type SignupData = {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    dob?: string;
+    address?: string;
+}
 
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  signup: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  signup: (data: SignupData) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   updateUser: (user: Partial<UserProfile>) => void;
 }
@@ -117,16 +125,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
         // If user not found, try to sign them up as it could be a first-time demo user
-         return signup(email.split('@')[0], email, password);
+         return signup({name: email.split('@')[0], email, password});
       }
       return { success: false, message: error.message || 'Invalid email or password.' };
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (data: SignupData) => {
      try {
+        const { name, email, password, ...additionalData } = data;
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await createUserProfile(userCredential.user, { name });
+        await createUserProfile(userCredential.user, { name, ...additionalData });
         return { success: true, message: "Signup successful" };
      } catch(error: any) {
         return { success: false, message: error.message || "Email already in use." };

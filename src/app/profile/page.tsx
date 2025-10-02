@@ -5,13 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star } from 'lucide-react';
+import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star, Mail, Phone, Calendar, Home } from 'lucide-react';
 import { Report, ReportStatus } from '@/lib/types';
-import { Textarea } from '@/components/ui/textarea';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
@@ -36,21 +31,23 @@ const getContributionLevel = (score: number) => {
     return { level: 'New Contributor', color: 'bg-gray-500', icon: <Star className="text-white"/> };
 }
 
+const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | undefined }) => (
+    <div className="flex items-center gap-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
+            {icon}
+        </div>
+        <div>
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
+            <p className="text-sm font-semibold">{value || 'Not provided'}</p>
+        </div>
+    </div>
+);
+
 
 export default function ProfilePage() {
-  const { user, isLoading: isUserLoading, updateUser } = useAuth();
+  const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
   const firestore = useFirestore();
-  
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [dob, setDob] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-
-  const [isSaving, setIsSaving] = useState(false);
 
   const userReportsQuery = useMemoFirebase(
     () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
@@ -78,28 +75,6 @@ export default function ProfilePage() {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
-
-  useEffect(() => {
-      if(user) {
-          setName(user.name || '');
-          setPhone(user.phone || '');
-          setDob(user.dob || '');
-          setAddress(user.address || '');
-          setCity(user.city || 'Chandigarh');
-          setState(user.state || 'Chandigarh');
-      }
-  }, [user]);
-
-  const handleSave = async () => {
-      if (!user) return;
-      setIsSaving(true);
-      
-      const updatedData = { name, phone, dob, address, city, state };
-      updateUser(updatedData);
-
-      toast({ title: 'Success', description: 'Profile updated successfully.' });
-      setIsSaving(false);
-  }
 
   const isLoading = isUserLoading || isReportsLoading;
 
@@ -163,43 +138,13 @@ export default function ProfilePage() {
                  <Card>
                     <CardHeader>
                         <CardTitle>Personal Information</CardTitle>
-                         <CardDescription>Keep your details up to date.</CardDescription>
+                         <CardDescription>Your registered details.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" value={user.email} disabled />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Phone Number</Label>
-                            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your phone number" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="dob">Date of Birth</Label>
-                            <Input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="address">Address</Label>
-                            <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Your full address" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                                <Label htmlFor="city">City</Label>
-                                <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Your city" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="state">State</Label>
-                                <Input id="state" value={state} onChange={(e) => setState(e.target.value)} placeholder="Your state" />
-                            </div>
-                        </div>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            Save Changes
-                        </Button>
+                        <InfoRow icon={<Mail className="h-4 w-4 text-muted-foreground" />} label="Email" value={user.email} />
+                        <InfoRow icon={<Phone className="h-4 w-4 text-muted-foreground" />} label="Phone" value={user.phone} />
+                        <InfoRow icon={<Calendar className="h-4 w-4 text-muted-foreground" />} label="Date of Birth" value={user.dob} />
+                        <InfoRow icon={<Home className="h-4 w-4 text-muted-foreground" />} label="Address" value={user.address} />
                     </CardContent>
                 </Card>
             </div>
