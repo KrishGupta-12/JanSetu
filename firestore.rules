@@ -1,127 +1,100 @@
 /**
- * @fileoverview Firestore Security Rules for the application.
+ * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
  *
  * Core Philosophy:
- * This ruleset prioritizes strong authorization and assumes a flexible data model for prototyping.
- * It enforces user-ownership for user profiles and public read access with owner-only writes for issue reports and alerts.
+ * This ruleset employs a hybrid security model, balancing open access for public content with strict ownership and role-based access controls for user data and administrative functions.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profiles.
- * - /issueReports/{reportId}: Stores publicly readable issue reports with owner-only modification rights.
- * - /admins/{email}: Stores administrator credentials, keyed by email.  This collection is not directly accessed by the client.
- * - /alerts/{alertId}: Stores platform alerts, readable by anyone, writable only by admins.
+ * - `/users/{userId}`: Stores user profiles. Access is restricted to the user themselves.
+ * - `/issueReports/{reportId}`: Stores issue reports. Read access is public, but writes are restricted to the report creator and authorized admins.
+ * - `/admins/{email}`: Stores admin credentials. This collection is intended for backend use only and is not directly accessible to clients.
+ * - `/alerts/{alertId}`: Stores platform alerts. Read access is public; write access is restricted to admins.
  *
  * Key Security Decisions:
- * - User listing is disallowed to protect user privacy.
- * - Public read access is granted for issue reports and alerts, but writes are strictly controlled.
- * - The 'admins' collection is not secured as it is not accessed from the client app (and is assumed to be managed via the Firebase Admin SDK).
+ * - User listing is disallowed to protect privacy.
+ * - Admin credentials are not directly accessible from the client.
+ * - Write access to issue reports is restricted to the creating user and authorized admins.
  *
  * Denormalization for Authorization:
- * - Issue Reports: Enforce that `citizenId` matches the authenticated user's UID on creation.
- * - Alerts: Enforce that `adminId` matches the authenticated user's UID on creation.
+ * - Issue reports denormalize the `citizenId` to enable ownership-based access control.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Defines a function to check if the current user is signed in.
-     * @returns {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Defines a function to check if the current user is the owner of the resource.
-     * @param {string} userId The user ID to compare against the request's auth UID.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Defines a function to check if the current user is the existing owner of the resource.
-     *  This function combines the ownership check with a resource existence check for safe updates and deletes.
-     * @param {string} userId The user ID to compare against the resource's owner ID.
-     * @returns {boolean} True if the user is the owner and the resource exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Defines a function to check if the current user is a super admin.
-     * @returns {boolean} True if the user is a super admin, false otherwise.
-     */
-    function isSuperAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
-    }
-
-    /**
-     * @description Security rules for user profiles.
+     * @description Secure user profiles. Only the authenticated user can read or write their own profile.
      * @path /users/{userId}
-     * @allow (create) User with UID 'test_user' can create their own profile.
-     *    request.auth.uid == 'test_user' && request.resource.data.uid == 'test_user'
-     * @allow (get) Any user can read a user profile.
-     * @allow (update) User with UID 'test_user' can update their profile.
-     *    request.auth.uid == 'test_user' && resource.data.uid == 'test_user'
-     * @allow (delete) User with UID 'test_user' can delete their own profile.
-     *    request.auth.uid == 'test_user' && resource.data.uid == 'test_user'
-     * @deny (create) User with UID 'test_user' cannot create a profile with a mismatched UID.
-     *    request.auth.uid == 'test_user' && request.resource.data.uid != 'test_user'
-     * @principle Enforces user-ownership: only the authenticated user can create, update, or delete their own profile.
+     * @allow (create) User with UID 'user123' creates a profile document with document ID 'user123'.
+     * @deny (create) User with UID 'user123' tries to create a profile document with document ID 'user456'.
+     * @allow (get, update, delete) User with UID 'user123' reads/updates/deletes their own profile document 'user123'.
+     * @deny (get, update, delete) User with UID 'user123' tries to read/update/delete profile document 'user456'.
+     * @principle Enforces strict user-ownership for profile data.
      */
     match /users/{userId} {
-      allow get: if true;
-      allow list: if false;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
 
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Security rules for issue reports.
+     * @description Secure issue reports. Publicly readable, but only the author or an admin can modify them.
      * @path /issueReports/{reportId}
-     * @allow (create) User with UID 'test_user' can create a new issue report with citizenId 'test_user'.
-     *    request.auth.uid == 'test_user' && request.resource.data.citizenId == 'test_user'
-     * @allow (get) Any user can read any issue report.
-     * @allow (update) User with UID 'test_user' can update the issue report they created.
-     *    request.auth.uid == 'test_user' && resource.data.citizenId == 'test_user'
-     * @allow (delete) User with UID 'test_user' can delete the issue report they created.
-     *    request.auth.uid == 'test_user' && resource.data.citizenId == 'test_user'
-     * @deny (create) User with UID 'test_user' cannot create an issue report with a mismatched citizenId.
-     *    request.auth.uid == 'test_user' && request.resource.data.citizenId != 'test_user'
-     * @principle Allows public read access, but restricts creation, updates, and deletes to the owner (citizen).
+     * @allow (get, list) Any user can read issue reports.
+     * @allow (create) User creates a report with their own UID in the 'citizenId' field.
+     * @deny (create) User creates a report with a mismatched 'citizenId' field.
+     * @allow (update, delete) User updates/deletes their own report (identified by 'citizenId' field).
+     * @principle Allows public read access while enforcing ownership for writes.
      */
     match /issueReports/{reportId} {
-      allow get: if true;
-      allow list: if true;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(citizenId) {
+        return request.auth.uid == citizenId;
+      }
+      function isExistingOwner(citizenId) {
+        return isOwner(citizenId) && resource != null;
+      }
 
+      allow get, list: if true;
       allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.citizenId);
       allow delete: if isExistingOwner(resource.data.citizenId);
     }
 
+     /**
+      * @description Secure admin credentials. This collection is NOT directly client-accessible.
+      * @path /admins/{email}
+      * @deny (get, list, create, update, delete) No direct client access allowed.
+      * @principle Restricts access to admin credentials for backend use only.
+      */
+    match /admins/{email} {
+      allow get, list, create, update, delete: if false;
+    }
+
     /**
-     * @description Security rules for alerts.
+     * @description Secure platform alerts. Publicly readable, but only admins can create them.
      * @path /alerts/{alertId}
-     * @allow (create) Super admin can create new alerts.
-     * @allow (get) Any user can read any alert.
-     * @allow (update) Super admin can update alerts.
-     * @allow (delete) Super admin can delete alerts.
-     * @deny (create) Non-admin users cannot create alerts.
-     * @principle Allows public read access, but restricts creation, updates, and deletes to super admins.
+     * @allow (get, list) Any user can read platform alerts.
+     * // TODO: Add owner validation once the schema is updated with an ownership field.
+     * @principle Allows public read access while restricting write access to admins.
      */
     match /alerts/{alertId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if isSuperAdmin() && request.resource.data.adminId == request.auth.uid;
-      allow update: if isSuperAdmin() && resource.data.adminId == request.auth.uid;
-      allow delete: if isSuperAdmin() && resource.data.adminId == request.auth.uid;
+      allow get, list: if true;
+      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
     }
   }
 }

@@ -108,9 +108,9 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const { firestore } = useAuth();
 
   const adminsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || admin.role !== AdminRole.SuperAdmin) return null;
     return query(collection(firestore, 'users'));
-  }, [firestore]);
+  }, [firestore, admin.role]);
   const { data: allAdmins } = useCollection<UserProfile>(adminsQuery);
 
 
