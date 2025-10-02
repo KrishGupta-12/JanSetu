@@ -21,18 +21,27 @@ import { add, format } from 'date-fns';
 
 function UserTableSkeleton() {
   return (
-    <div className="space-y-4">
-      {Array(5)
-        .fill(0)
-        .map((_, i) => (
-          <div key={i} className="flex items-center space-x-4 p-4 border rounded-md">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-[250px]" />
-              <Skeleton className="h-4 w-[200px]" />
-            </div>
-          </div>
-        ))}
+    <div className="rounded-md border">
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-40" /></div></div></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
     </div>
   );
 }
@@ -46,7 +55,6 @@ export default function UsersPage() {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   // This query will fetch all users with the role of 'citizen'.
-  // This should now work with the simplified security rules.
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
@@ -55,7 +63,7 @@ export default function UsersPage() {
   const { data: users, isLoading: areUsersLoading, error } = useCollection<UserProfile>(usersQuery);
 
   if (error) {
-    console.error("Firestore error:", error);
+    console.error("Firestore error fetching users:", error);
   }
 
   const handleOpenManageDialog = (user: UserProfile) => {
@@ -75,6 +83,7 @@ export default function UsersPage() {
       description: `${selectedUser.name} has been banned for 60 days.`,
     });
     setIsManageDialogOpen(false);
+    setSelectedUser(null);
   };
 
   const handleRemoveBan = () => {
@@ -88,6 +97,7 @@ export default function UsersPage() {
       description: `The ban has been lifted for ${selectedUser.name}.`,
     });
     setIsManageDialogOpen(false);
+    setSelectedUser(null);
   };
 
   const isLoading = isUserLoading || areUsersLoading;
@@ -166,7 +176,7 @@ export default function UsersPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                        No citizen users found.
+                        {error ? `Error loading users: ${error.message}` : 'No citizen users found.'}
                       </TableCell>
                     </TableRow>
                   )}
