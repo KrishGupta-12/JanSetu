@@ -1,22 +1,15 @@
 
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
+import { UserProfile, LeaderboardEntry, LeaderboardDocument } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
-
-type LeaderboardEntry = {
-  citizen: UserProfile;
-  score: number;
-  totalReports: number;
-  resolvedReports: number;
-};
 
 const getContributionLevel = (score: number) => {
     if (score >= 50) return { level: 'Platinum', color: 'text-blue-500', icon: <Award /> };
@@ -65,40 +58,22 @@ function LeaderboardSkeleton() {
 export default function LeaderboardPage() {
     const { user, firestore } = useAuth();
 
-    const citizensQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      // Securely fetch top citizens by pre-calculated score.
-      // We can't query all users, so we sort by score and take the top ones.
-      return query(
-          collection(firestore, 'users'), 
-          where('role', '==', 'citizen'),
-          orderBy('totalReports', 'desc'), // Using totalReports as a stand-in for score
-          limit(20)
-      );
+    const leaderboardDocRef = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return doc(firestore, 'leaderboard', 'top_contributors');
     }, [firestore]);
-    const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
-    
-    const leaderboardData: LeaderboardEntry[] = useMemo(() => {
-        if (!citizens) return [];
 
-        return citizens.map(citizen => {
-            const score = (citizen.resolvedReports || 0) * 5 + (citizen.totalReports || 0);
-            return {
-                citizen,
-                score,
-                totalReports: citizen.totalReports || 0,
-                resolvedReports: citizen.resolvedReports || 0,
-            };
-        }).sort((a, b) => b.score - a.score);
-    }, [citizens]);
+    const { data: leaderboardDoc, isLoading } = useDoc<LeaderboardDocument>(leaderboardDocRef);
+    
+    const leaderboardData = leaderboardDoc?.users || [];
 
     const userRank = useMemo(() => {
         if (!leaderboardData || !user) return null;
-        const rank = leaderboardData.findIndex(entry => entry.citizen.uid === user.uid);
+        const rank = leaderboardData.findIndex(entry => entry.uid === user.uid);
         return rank !== -1 ? rank + 1 : null;
     }, [leaderboardData, user]);
 
-    if (citizensLoading) {
+    if (isLoading) {
         return <LeaderboardSkeleton />;
     }
 
@@ -129,7 +104,7 @@ export default function LeaderboardPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Top Contributors</CardTitle>
-                    <CardDescription>Ranking is based on the number and impact of reports submitted.</CardDescription>
+                    <CardDescription>Ranking is based on the number and impact of reports submitted. Updated regularly.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border">
@@ -147,15 +122,15 @@ export default function LeaderboardPage() {
                                 {leaderboardData.map((entry, index) => {
                                     const { icon, color, level } = getContributionLevel(entry.score);
                                     return (
-                                        <TableRow key={entry.citizen.uid} className={index < 3 ? 'bg-secondary' : ''}>
+                                        <TableRow key={entry.uid} className={index < 3 ? 'bg-secondary' : ''}>
                                             <TableCell className="font-bold text-lg">{index + 1}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Avatar>
-                                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${entry.citizen.name}`} />
-                                                        <AvatarFallback>{entry.citizen.name.charAt(0)}</AvatarFallback>
+                                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${entry.name}`} />
+                                                        <AvatarFallback>{entry.name.charAt(0)}</AvatarFallback>
                                                     </Avatar>
-                                                    <span className="font-medium">{entry.citizen.name}</span>
+                                                    <span className="font-medium">{entry.name}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="font-semibold text-xl">{entry.score}</TableCell>

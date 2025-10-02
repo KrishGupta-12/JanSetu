@@ -27,6 +27,43 @@ export type FormState = {
   status: 'success' | 'error' | 'idle';
 };
 
+async function updateUserStatsAndLeaderboard(firestore: FirebaseFirestore.Firestore, citizenId: string) {
+    const userRef = firestore.collection('users').doc(citizenId);
+    
+    await firestore.runTransaction(async (transaction) => {
+      transaction.update(userRef, {
+        totalReports: FieldValue.increment(1)
+      });
+    });
+
+    // In a real-world app, this might be a scheduled function,
+    // but for now, we'll update it on every new report.
+    await updateLeaderboard(firestore);
+}
+
+async function updateLeaderboard(firestore: FirebaseFirestore.Firestore) {
+    const usersSnapshot = await firestore.collection('users').where('role', '==', 'citizen').get();
+    const users = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
+
+    const leaderboardData = users.map(user => {
+        const score = (user.resolvedReports || 0) * 5 + (user.totalReports || 0);
+        return {
+            uid: user.uid,
+            name: user.name,
+            score,
+            totalReports: user.totalReports || 0,
+            resolvedReports: user.resolvedReports || 0,
+        };
+    }).sort((a, b) => b.score - a.score).slice(0, 20);
+
+    const leaderboardRef = firestore.collection('leaderboard').doc('top_contributors');
+    await leaderboardRef.set({
+        users: leaderboardData,
+        lastUpdated: new Date().toISOString(),
+    });
+}
+
+
 export async function submitReport(
   values: ReportFormValues
 ): Promise<FormState> {
@@ -57,27 +94,13 @@ export async function submitReport(
       status: ReportStatus.Pending,
       upvotes: 0,
       citizenIdsWhoUpvoted: [],
-      urgency: 'Medium', // Default urgency, admin can change
+      urgency: 'Medium',
     };
     
-    // Use a transaction to create the report and update the user's report count
-    const userRef = firestore.collection('users').doc(citizenId);
-    const reportRef = firestore.collection('issueReports').doc();
-
-    await firestore.runTransaction(async (transaction) => {
-      // It's good practice to read the user doc first in a transaction,
-      // though here we are just incrementing.
-      const userDoc = await transaction.get(userRef);
-      if (!userDoc.exists) {
-        throw new Error("User profile does not exist!");
-      }
-
-      transaction.set(reportRef, reportData);
-      transaction.update(userRef, {
-        totalReports: FieldValue.increment(1)
-      });
-    });
-
+    await firestore.collection('issueReports').add(reportData);
+    
+    // This is now a separate, non-blocking call to update stats and leaderboard
+    updateUserStatsAndLeaderboard(firestore, citizenId).catch(console.error);
 
     return {
       status: 'success',

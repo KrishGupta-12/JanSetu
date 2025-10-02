@@ -1,4 +1,5 @@
 
+
 export enum ReportCategory {
   Waste = 'Waste Management',
   Pothole = 'Potholes',
@@ -120,3 +121,16 @@ export type Alert = {
   adminId: string;
   adminName: string;
 };
+
+export type LeaderboardEntry = {
+  uid: string;
+  name: string;
+  score: number;
+  totalReports: number;
+  resolvedReports: number;
+};
+
+export type LeaderboardDocument = {
+    users: LeaderboardEntry[];
+    lastUpdated: string;
+}

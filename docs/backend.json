@@ -60,6 +60,29 @@
       },
       "required": ["citizenId", "complainantName", "complainantPhone", "locationAddress", "category", "description", "reportDate", "status", "upvotes", "citizenIdsWhoUpvoted"]
     },
+    "Leaderboard": {
+      "title": "Leaderboard",
+      "type": "object",
+      "description": "Holds the pre-calculated list of top contributors.",
+      "properties": {
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "uid": { "type": "string" },
+              "name": { "type": "string" },
+              "score": { "type": "number" },
+              "totalReports": { "type": "number" },
+              "resolvedReports": { "type": "number" }
+            },
+            "required": ["uid", "name", "score", "totalReports", "resolvedReports"]
+          }
+        }
+      },
+      "required": ["lastUpdated", "users"]
+    },
     "AdminCredential": {
         "title": "Admin Credential",
         "type": "object",
@@ -101,6 +124,10 @@
     "'/alerts/{alertId}'": {
       "schema": { "$ref": "#/entities/Alert" },
       "description": "Stores all platform-wide alerts published by administrators."
+    },
+    "'/leaderboard/{leaderboardId}'": {
+      "schema": { "$ref": "#/entities/Leaderboard" },
+      "description": "Stores the pre-calculated leaderboard data. Should only contain one document."
     }
   },
   "auth": {
