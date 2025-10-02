@@ -22,13 +22,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Image as ImageIcon, Loader2, Ban } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-import { submitReport, ReportFormValues } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { ReportCategory } from '@/lib/types';
+import { ReportCategory, ReportStatus } from '@/lib/types';
 import { reportCategories } from '@/lib/data';
+import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
 
 const reportFormSchema = z.object({
   description: z.string().min(10, {
@@ -44,9 +43,11 @@ const reportFormSchema = z.object({
   citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
 
+type ReportFormValues = z.infer<typeof reportFormSchema>;
+
 
 export default function ReportForm() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,24 +92,58 @@ export default function ReportForm() {
   }, [user, isUserLoading, router, toast]);
 
   async function onSubmit(values: ReportFormValues) {
-    setIsSubmitting(true);
-    const result = await submitReport(values);
-
-    if (result.status === 'success') {
-      toast({
-        title: 'Success!',
-        description: result.message,
-      });
-      form.reset();
-      router.push('/dashboard/my-reports');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.message,
-      });
+    if (!firestore || !user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not connect to the database.' });
+        return;
     }
-    setIsSubmitting(false);
+    setIsSubmitting(true);
+    
+    try {
+        const { imageUrl, description, citizenId, complainantName, complainantPhone, locationAddress, category } = values;
+        
+        // 1. Create the new report document
+        const reportData = {
+          citizenId,
+          complainantName,
+          complainantPhone,
+          locationAddress,
+          description,
+          imageUrl: imageUrl || '',
+          category,
+          reportDate: new Date().toISOString(),
+          status: ReportStatus.Pending,
+          upvotes: 0,
+          citizenIdsWhoUpvoted: [],
+          urgency: 'Medium',
+        };
+        
+        const reportsCollection = collection(firestore, 'issueReports');
+        await addDoc(reportsCollection, reportData);
+
+        // 2. Increment the user's totalReports count
+        const userDocRef = doc(firestore, 'users', user.uid);
+        await updateDoc(userDocRef, {
+            totalReports: increment(1)
+        });
+
+        // 3. Show success and redirect
+        toast({
+            title: 'Success!',
+            description: 'Your report has been submitted successfully.',
+        });
+        form.reset();
+        router.push('/dashboard/my-reports');
+
+    } catch (error) {
+        console.error('Error submitting report:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   if (isUserLoading || !user) {
