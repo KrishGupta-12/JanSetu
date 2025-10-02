@@ -1,7 +1,7 @@
 'use server';
 
-import { Auth, UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, Firestore } from 'firebase/firestore';
+import { Auth, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, setDoc, Firestore } from 'firebase/firestore';
 import { generateJanId } from './utils';
 import { AdminRole, ReportCategory } from './types';
 import { FirebaseError } from 'firebase/app';
@@ -36,10 +36,11 @@ const adminsToSeed = [
     },
 ];
 
-async function createOrGetAdmin(auth: Auth, firestore: Firestore, adminInfo: any): Promise<UserCredential | null> {
+async function createOrGetAdmin(auth: Auth, firestore: Firestore, adminInfo: any): Promise<User | null> {
     try {
         // Try to sign in. If successful, the user exists.
-        return await signInWithEmailAndPassword(auth, adminInfo.email, adminInfo.password);
+        const userCredential = await signInWithEmailAndPassword(auth, adminInfo.email, adminInfo.password);
+        return userCredential.user;
     } catch (error) {
         if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
             // User does not exist, so create them.
@@ -60,18 +61,8 @@ async function createOrGetAdmin(auth: Auth, firestore: Firestore, adminInfo: any
                 dateJoined: new Date().toISOString(),
             });
 
-            // Also create a citizen profile for them for consistency, though they are admins
-            const citizenRef = doc(firestore, 'citizens', adminUser.uid);
-            await setDoc(citizenRef, {
-                 id: adminUser.uid,
-                 janId: janId,
-                 name: adminInfo.name,
-                 email: adminInfo.email,
-                 phone: '0000000000',
-                 dateJoined: new Date().toISOString(),
-            });
             console.log(`Successfully created admin: ${adminInfo.email}`);
-            return userCredential;
+            return adminUser;
         } else {
             // Rethrow other errors
             console.error(`Error checking/creating admin ${adminInfo.email}:`, error);
@@ -83,9 +74,8 @@ async function createOrGetAdmin(auth: Auth, firestore: Firestore, adminInfo: any
 export async function seedAdminUsers(auth: Auth, firestore: Firestore) {
     console.log('Starting to seed admin users...');
     const originalUser = auth.currentUser;
-    const originalUserEmail = originalUser?.email;
-
-    // Temporarily sign out the current user if they exist
+    
+    // Temporarily sign out the current user if they exist to perform seeding
     if (originalUser) {
         await signOut(auth);
     }
@@ -102,11 +92,6 @@ export async function seedAdminUsers(auth: Auth, firestore: Firestore) {
         }
     }
 
-    // Attempt to re-authenticate the original user if they were signed in.
-    // This is a simplified example; a real-world app would need a more robust re-authentication flow.
-    if (originalUserEmail) {
-        console.log(`Seeding complete. Original user ${originalUserEmail} was signed out.`);
-    } else {
-        console.log('Seeding complete.');
-    }
+    // After seeding, the user is signed out. The user will need to log in manually.
+    console.log('Admin user seeding complete. Please log in.');
 }

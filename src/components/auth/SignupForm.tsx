@@ -4,11 +4,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, runTransaction, collection } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -32,7 +32,6 @@ import { useAuth, useFirestore, useUser } from '@/firebase';
 import { Textarea } from '../ui/textarea';
 import { seedAdminUsers } from '@/lib/seed';
 import { generateJanId } from '@/lib/utils';
-import { AdminRole, ReportCategory } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -52,6 +51,7 @@ const formSchema = z.object({
 
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(true);
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
@@ -76,23 +76,29 @@ export function SignupForm() {
     },
   });
 
+  const runSeed = useCallback(async () => {
+    if (auth && firestore) {
+      await seedAdminUsers(auth, firestore);
+    }
+    setIsSeeding(false);
+  }, [auth, firestore]);
+
+  useEffect(() => {
+    // Check if seeding has been run in this session
+    if (sessionStorage.getItem('seeding_run') !== 'true') {
+        runSeed();
+        sessionStorage.setItem('seeding_run', 'true');
+    } else {
+        setIsSeeding(false);
+    }
+  }, [runSeed]);
+
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {
       form.setValue('dob', `${dobYear}-${dobMonth}-${dobDay}`);
       form.clearErrors('dob');
     }
   }, [dobDay, dobMonth, dobYear, form]);
-  
-  useEffect(() => {
-    const runSeed = async () => {
-        if(auth && firestore) {
-            await seedAdminUsers(auth, firestore);
-        }
-    };
-    if (!isUserLoading && !user) {
-        runSeed();
-    }
-  }, [auth, firestore, isUserLoading, user]);
 
   useEffect(() => {
     // This effect should only redirect if the user is already logged in when visiting the page.
@@ -174,6 +180,15 @@ export function SignupForm() {
     ];
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 100 }, (_, i) => (currentYear - 18 - i).toString());
+  
+  if (isSeeding) {
+    return (
+        <div className="flex flex-col items-center justify-center space-y-4 p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Setting up admin accounts...</p>
+        </div>
+    )
+  }
 
   return (
     <Form {...form}>
