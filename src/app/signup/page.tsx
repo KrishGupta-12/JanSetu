@@ -5,7 +5,7 @@ import Link from 'next/link';
 export default function SignupPage() {
   return (
     <div className="container mx-auto flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
           <CardDescription>Join JanSetu to help improve your community.</CardDescription>

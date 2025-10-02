@@ -31,6 +31,23 @@
           "type": "string",
           "description": "Date and time when the citizen joined the application.",
           "format": "date-time"
+        },
+        "dob": {
+            "type": "string",
+            "description": "Date of birth of the citizen.",
+            "format": "date"
+        },
+        "address": {
+            "type": "string",
+            "description": "Full address of the citizen."
+        },
+        "city": {
+            "type": "string",
+            "description": "City of residence of the citizen."
+        },
+        "state": {
+            "type": "string",
+            "description": "State of residence of the citizen."
         }
       },
       "required": [

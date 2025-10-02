@@ -33,3 +33,15 @@ export type AqiSensor = {
   aqi: number;
   name: string;
 };
+
+export type Citizen = {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    dateJoined: string; // ISO string
+    dob?: string; // yyyy-mm-dd
+    address?: string;
+    city?: string;
+    state?: string;
+}
