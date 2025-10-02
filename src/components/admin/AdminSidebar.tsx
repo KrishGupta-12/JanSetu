@@ -30,7 +30,6 @@ const allMenuItems = [
   { href: '/admin/users', label: 'Users', icon: Users, roles: [UserRole.SuperAdmin] },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart, roles: [UserRole.SuperAdmin] },
   { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
-  { href: '/admin/make-super-admin', label: 'Make Super Admin', icon: UserCog, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
 ];
 
 function SidebarSkeleton() {
