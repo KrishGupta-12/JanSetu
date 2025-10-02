@@ -5,7 +5,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { Alert as AlertType, AlertLevel } from '@/lib/types';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
-import { Info, TriangleAlert, Siren } from 'lucide-react';
+import { Info, TriangleAlert, Siren, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const levelStyles: Record<AlertLevel, string> = {
