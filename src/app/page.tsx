@@ -161,8 +161,14 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-background border-t">
-        <div className="container mx-auto py-6 px-4 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} JanSetu. All rights reserved.</p>
+        <div className="container mx-auto py-8 px-4 text-center">
+            <div className="flex justify-center gap-6 mb-4">
+                <Link href="/features" className="text-sm text-muted-foreground hover:text-primary">Features</Link>
+                <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary">Terms of Service</Link>
+                <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary">Privacy Policy</Link>
+                <Link href="/contact" className="text-sm text-muted-foreground hover:text-primary">Contact Us</Link>
+            </div>
+            <p className="text-muted-foreground">&copy; {new Date().getFullYear()} JanSetu. All rights reserved.</p>
         </div>
       </footer>
     </div>
