@@ -28,7 +28,7 @@ function UserTableSkeleton() {
                     <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                     <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                     <TableHead><Skeleton className="h-6 w-full" /></TableHead>
-                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                    <TableHead className="text-right"><Skeleton className="h-6 w-full" /></TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -54,9 +54,9 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
-  // This query will fetch all users with the role of 'citizen'.
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // Query for all users who are citizens
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore]);
 
@@ -65,6 +65,13 @@ export default function UsersPage() {
   if (error) {
     console.error("Firestore error fetching users:", error);
   }
+
+  // Effect to protect the route for super admins only
+  useEffect(() => {
+    if (!isUserLoading && (!adminUser || adminUser.role !== UserRole.SuperAdmin)) {
+      router.push('/admin');
+    }
+  }, [isUserLoading, adminUser, router]);
 
   const handleOpenManageDialog = (user: UserProfile) => {
     setSelectedUser(user);
@@ -102,9 +109,24 @@ export default function UsersPage() {
 
   const isLoading = isUserLoading || areUsersLoading;
 
-  if (!isUserLoading && adminUser?.role !== UserRole.SuperAdmin) {
-    router.push('/admin');
-    return null;
+  if (isLoading || !adminUser) {
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight font-headline">User Management</h1>
+                <p className="text-muted-foreground">View and manage citizen accounts.</p>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Citizen Users</CardTitle>
+                    <CardDescription>A list of all registered citizens on the platform.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <UserTableSkeleton />
+                </CardContent>
+            </Card>
+        </div>
+    )
   }
 
   return (
@@ -120,9 +142,6 @@ export default function UsersPage() {
           <CardDescription>A list of all registered citizens on the platform.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <UserTableSkeleton />
-          ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -176,14 +195,13 @@ export default function UsersPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                        {error ? `Error loading users: ${error.message}` : 'No citizen users found.'}
+                        {areUsersLoading ? 'Loading users...' : (error ? `Error loading users` : 'No citizen users found.')}
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
-          )}
         </CardContent>
       </Card>
 
