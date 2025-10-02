@@ -4,17 +4,20 @@
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { initializeAdminApp } from '@/firebase/server-init';
-import { collection, addDoc } from 'firebase/firestore';
 import { ReportCategory } from './types';
 
 const reportSchema = z.object({
-  description: z.string().min(10, 'Description must be at least 10 characters.'),
-  category: z.nativeEnum(ReportCategory),
-  complainantName: z.string().min(1, 'Name is required.'),
-  complainantPhone: z.string().min(1, 'Phone number is required.'),
-  locationAddress: z.string().min(1, 'Address is required.'),
+  description: z.string().min(10, {
+    message: 'Description must be at least 10 characters.',
+  }),
+  category: z.nativeEnum(ReportCategory, {
+    required_error: 'Please select a category.',
+  }),
+  complainantName: z.string().min(1, { message: 'Name is required.' }),
+  complainantPhone: z.string().min(1, { message: 'Phone number is required.' }),
+  locationAddress: z.string().min(1, { message: 'Address is required.' }),
   photo: z.string().optional(),
-  citizenId: z.string().min(1, 'Citizen ID is missing.'),
+  citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
 
 export type ReportFormValues = z.infer<typeof reportSchema>;
@@ -59,10 +62,11 @@ export async function submitReport(
       status: 'Pending',
       upvotes: 0,
       citizenIdsWhoUpvoted: [],
+      // Urgency will be set by an admin
     };
 
-    const reportsCollection = collection(firestore, 'issueReports');
-    await addDoc(reportsCollection, reportData);
+    const reportsCollection = firestore.collection('issueReports');
+    await reportsCollection.add(reportData);
 
     return {
       status: 'success',
