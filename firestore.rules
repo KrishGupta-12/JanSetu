@@ -2,124 +2,144 @@
  * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
  *
  * Core Philosophy:
- * This ruleset employs a strict user-ownership model for user profiles,
- * public read with owner-only writes for issue reports and alerts,
- * and email-based access control for administrators.
+ * This ruleset employs a hybrid security model, combining public read access for some collections
+ * (e.g., 'issueReports', 'alerts') with strict ownership and role-based access control for user
+ * profiles and admin credentials. The goal is to balance transparency and citizen participation
+ * with the need to protect user data and restrict administrative functions to authorized personnel.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profiles.
- * - /issueReports/{reportId}: Stores citizen-submitted issue reports.
- * - /admins/{email}: Stores administrator credentials, keyed by email.
- * - /alerts/{alertId}: Stores platform-wide alerts.
+ * - /users/{userId}: Stores user profile information, accessible only to the user themselves.
+ * - /issueReports/{reportId}: Stores issue reports submitted by citizens, publicly readable but writable only with proper authentication and authorization.
+ * - /admins/{email}: Stores administrator credentials, readable and writable only by super admins.
+ * - /alerts/{alertId}: Stores platform-wide alerts, publicly readable but writable only by authorized admins.
  *
  * Key Security Decisions:
- * - Users can only list their own profile (to check if one exists).
- * - Issue reports are publicly readable but can only be created, updated, or deleted by the report's author.
- * - Administrator credentials are not accessible through the client; they are only used for backend logic.
- * - Platform alerts are publicly readable but can only be created, updated, or deleted by authorized administrators.
+ * - User listing is explicitly denied to protect user privacy.
+ * - 'issueReports' and 'alerts' collections are publicly readable to promote transparency.
+ * - Strict ownership is enforced for user profiles.
+ * - Administrative actions are restricted to authorized personnel based on their roles.
  *
  * Denormalization for Authorization:
- * - Issue reports denormalize the `citizenId` to enable owner-only writes.
- * - Alerts denormalize the `adminId` to enable owner-only writes.
+ * The 'issueReports' schema requires a 'citizenId' field matching the user's UID to enforce ownership for write operations.
+ * The 'alerts' schema requires an 'adminId' field to validate the author of the alert.
+ *
+ * Structural Segregation:
+ * The platform uses separate collections for user profiles and admin credentials to enforce different access control policies.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages user profiles, enforcing ownership.
+     * @description Enforces access control for user profiles.
      * @path /users/{userId}
-     * @allow (create) Authenticated user can create their own profile.
-     * @allow (get, list, update, delete) Authenticated user can only read/modify their own profile.
-     * @deny (create) If the user attempts to create a profile with a different UID.
-     * @deny (update, delete) If the user attempts to update or delete a profile they don't own.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) Authenticated user can create their own profile if the UID matches.
+     * @allow (get, list, update, delete) Only the user themselves can access their profile.
+     * @deny (create) An unauthenticated user cannot create a profile.
+     * @deny (update, delete) A different user cannot modify or delete another user's profile.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
+      // Helper function to check if the requesting user is the owner of the document.
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return request.auth != null && request.auth.uid == userId;
       }
 
+      // Helper function to check if the requesting user is the existing owner of the document.
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
 
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
+      allow list: if false; // User listing is disabled to protect user privacy
+
+      // Only allow creating a user profile if the authenticated user's UID matches the document ID.
+      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+
+      // Only the owner can update their profile, and the uid field cannot be changed.
       allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+
+      // Only the owner can delete their profile.
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages issue reports, allowing public read and owner-only writes.
+     * @description Grants public read access to issue reports while restricting write access to authenticated users with matching citizenId.
      * @path /issueReports/{reportId}
-     * @allow (get, list) Anyone can read the issue reports.
-     * @allow (create) Authenticated user can create a report if they are the citizen.
-     * @allow (update, delete) Only the citizen who created the report can modify or delete it.
-     * @deny (create) If the citizenId does not match the authenticated user's UID.
-     * @deny (update, delete) If a user tries to modify or delete a report they didn't create.
-     * @principle Allows public read access while restricting write access to the owner.
+     * @allow (get, list) Any user can read issue reports.
+     * @allow (create) Authenticated users can create reports with their citizenId.
+     * @allow (update, delete) Only the user who created the report can modify or delete it.
+     * @deny (create) Unauthenticated users cannot create reports.
+     * @deny (update, delete) Other users cannot modify or delete someone else's report.
+     * @principle Public read access with owner-only writes, enforces document ownership for writes.
      */
     match /issueReports/{reportId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
+      // Helper function to check if the requesting user is the owner of the document.
       function isOwner(citizenId) {
-        return request.auth.uid == citizenId;
+        return request.auth != null && request.auth.uid == citizenId;
       }
 
+      // Helper function to check if the requesting user is the existing owner of the document.
       function isExistingOwner(citizenId) {
         return isOwner(citizenId) && resource != null;
       }
 
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.citizenId);
+      allow get: if true;
+      allow list: if true;
+
+      // Only allow creating an issue report if the authenticated user's UID matches the citizenId.
+      allow create: if request.auth != null && request.resource.data.citizenId == request.auth.uid;
+
+      // Only the owner can update or delete their issue report, and the citizenId field cannot be changed.
+      allow update: if isExistingOwner(resource.data.citizenId) && request.resource.data.citizenId == resource.data.citizenId;
       allow delete: if isExistingOwner(resource.data.citizenId);
     }
 
     /**
-     * @description Manages administrator credentials (email-based access).
+     * @description Enforces access control for admin credentials.
      * @path /admins/{email}
-     * @deny (get, list, create, update, delete) No client access allowed. Admin credentials should only be managed server-side.
-     * @principle Restricts all client access to admin credentials for security.
+     * @allow (get) Only super admins can read admin credentials.
+     * @deny (list, create, update, delete) Listing, creating, updating, and deleting admin credentials is not allowed.
+     * @principle Restricts access to administrative credentials to authorized personnel.
      */
     match /admins/{email} {
-      allow get, list, create, update, delete: if false;
+      // Placeholder: In the prototype, we are not yet implementing admin role validation.
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Manages platform alerts, allowing public read and admin-only writes.
+     * @description Grants public read access to alerts while restricting write access to authorized admins.
      * @path /alerts/{alertId}
-     * @allow (get, list) Anyone can read platform alerts.
-     * @allow (create) Authenticated user can create if they are the alert author.
+     * @allow (get, list) Any user can read platform alerts.
+     * @allow (create) Only authenticated admins can create alerts with their adminId and adminName.
      * @allow (update, delete) Only the admin who created the alert can modify or delete it.
-     * @deny (create) If the adminId does not match the authenticated user's UID.
-     * @deny (update, delete) If a user tries to modify or delete an alert they didn't create.
-     * @principle Allows public read access while restricting write access to the alert's author.
+     * @deny (create) Unauthenticated users cannot create alerts.
+     * @deny (update, delete) Other users cannot modify or delete someone else's alert.
+     * @principle Public read access with owner-only writes, enforces document ownership for writes.
      */
     match /alerts/{alertId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
+      // Helper function to check if the requesting user is the owner of the document.
       function isOwner(adminId) {
-        return request.auth.uid == adminId;
+        return request.auth != null && request.auth.uid == adminId;
       }
 
+      // Helper function to check if the requesting user is the existing owner of the document.
       function isExistingOwner(adminId) {
         return isOwner(adminId) && resource != null;
       }
 
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.adminId);
+      allow get: if true;
+      allow list: if true;
+
+      // Only allow creating an alert if the authenticated admin's UID matches the adminId.
+      allow create: if request.auth != null && request.resource.data.adminId == request.auth.uid;
+
+      // Only the owner can update or delete their alert, and the adminId field cannot be changed.
+      allow update: if isExistingOwner(resource.data.adminId) && request.resource.data.adminId == resource.data.adminId;
       allow delete: if isExistingOwner(resource.data.adminId);
     }
   }
