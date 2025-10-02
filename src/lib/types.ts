@@ -1,6 +1,4 @@
 
-
-
 export enum ReportCategory {
   Waste = 'Waste Management',
   Pothole = 'Potholes',
@@ -95,6 +93,11 @@ export const DepartmentAdminRoles: UserRole[] = [
   UserRole.PotholeAdmin,
   UserRole.StreetlightAdmin,
   UserRole.WaterAdmin
+];
+
+export const AllAdminRoles: UserRole[] = [
+  UserRole.SuperAdmin,
+  ...DepartmentAdminRoles
 ];
 
 export type AdminCredential = {
