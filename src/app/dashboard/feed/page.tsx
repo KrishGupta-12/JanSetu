@@ -125,7 +125,7 @@ export default function CommunityFeedPage() {
                             <CardHeader className="flex flex-row items-start gap-4">
                                 <Avatar className="h-12 w-12">
                                     <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${report.citizen?.name}`} />
-                                    <AvatarFallback>{report.citizen?.name.charAt(0)}</AvatarFallback>
+                                    <AvatarFallback>{report.citizen?.name ? report.citizen.name.charAt(0) : 'A'}</AvatarFallback>
                                 </Avatar>
                                 <div className='flex-1'>
                                     <p className="font-semibold">{report.citizen?.name || 'Anonymous'}</p>

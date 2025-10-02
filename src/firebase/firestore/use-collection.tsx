@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -34,7 +35,8 @@ export interface InternalQuery extends Query<DocumentData> {
       canonicalString(): string;
       toString(): string;
     }
-  }
+  },
+  path: string
 }
 
 /**
