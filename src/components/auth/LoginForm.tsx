@@ -1,43 +1,54 @@
 
 'use client';
 
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect } from 'react';
-import { Loader2, User, UserCog, Shield } from 'lucide-react';
-import { AdminRole, UserProfile } from '@/lib/types';
 
-type DemoUser = {
-  email: string;
-  name: string;
-  role: string;
-  icon: React.ReactNode;
-};
 
-const demoUsers: DemoUser[] = [
-  { email: 'amit.kumar@example.com', name: 'Amit Kumar', role: 'Citizen', icon: <User /> },
-  { email: 'priya.sharma@example.com', name: 'Priya Sharma', role: 'Citizen', icon: <User /> },
-  { email: 'super.admin@jancorp.com', name: 'Super Admin', role: 'Municipal Head', icon: <Shield /> },
-  { email: 'waste.admin@jancorp.com', name: 'Waste Dept.', role: 'Admin', icon: <UserCog /> },
-  { email: 'pothole.admin@jancorp.com', name: 'Pothole Dept.', role: 'Admin', icon: <UserCog /> },
-  { email: 'streetlight.admin@jancorp.com', name: 'Streetlight Dept.', role: 'Admin', icon: <UserCog /> },
-];
+const formSchema = z.object({
+  email: z.string().email({
+    message: 'Please enter a valid email address.',
+  }),
+  password: z.string().min(6, {
+    message: 'Password must be at least 6 characters.',
+  }),
+});
 
 
 export function LoginForm() {
-  const [loadingUser, setLoadingUser] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { login, user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleDemoLogin = async (email: string) => {
-    setLoadingUser(email);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
     
-    const password = 'password123';
-    
-    const result = await login(email, password);
+    const result = await login(values.email, values.password);
 
     if (result.success) {
       toast({
@@ -45,7 +56,7 @@ export function LoginForm() {
         description: 'Logged in successfully!',
       });
       // The useAuth hook will update the user state,
-      // and a separate useEffect can handle routing based on role.
+      // and the useEffect below will handle the redirect.
     } else {
       toast({
         variant: 'destructive',
@@ -53,7 +64,7 @@ export function LoginForm() {
         description: result.message,
       });
     }
-    setLoadingUser(null);
+    setIsLoading(false);
   };
   
     // This effect will run when the user state changes after a successful login.
@@ -69,26 +80,39 @@ export function LoginForm() {
 
 
   return (
-    <div className="space-y-4">
-      {demoUsers.map((demoUser) => (
-        <Button
-          key={demoUser.email}
-          onClick={() => handleDemoLogin(demoUser.email)}
-          disabled={!!loadingUser}
-          className="w-full justify-start h-14"
-          variant="outline"
-        >
-          {loadingUser === demoUser.email ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <span className="mr-4 text-primary">{demoUser.icon}</span>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="name@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-          <div className="text-left">
-            <p className="font-semibold">{demoUser.name}</p>
-            <p className="text-xs text-muted-foreground">{demoUser.role}</p>
-          </div>
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="••••••••" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Log In
         </Button>
-      ))}
-    </div>
+      </form>
+    </Form>
   );
 }
