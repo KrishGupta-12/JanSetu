@@ -26,10 +26,16 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { submitReport, ReportFormValues } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { ReportCategory } from '@/lib/types';
+import { reportCategories } from '@/lib/data';
 
 const reportFormSchema = z.object({
   description: z.string().min(10, {
     message: 'Description must be at least 10 characters.',
+  }),
+  category: z.nativeEnum(ReportCategory, {
+    required_error: 'Please select a category.',
   }),
   complainantName: z.string().min(1, { message: 'Name is required.' }),
   complainantPhone: z.string().min(1, { message: 'Phone number is required.' }),
@@ -184,6 +190,29 @@ export default function ReportForm() {
               </FormItem>
             )}
           />
+          
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an issue category" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {reportCategories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
@@ -195,7 +224,7 @@ export default function ReportForm() {
                   <Textarea placeholder="Tell us more about the issue..." {...field} />
                 </FormControl>
                 <FormDescription>
-                  Our AI will automatically determine the category and urgency based on your description.
+                 Please provide as much detail as possible.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

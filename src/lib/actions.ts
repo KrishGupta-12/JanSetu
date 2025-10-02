@@ -3,12 +3,13 @@
 
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
-import { classifyReport } from '@/ai/flows/classify-report';
 import { initializeAdminApp } from '@/firebase/server-init';
 import { collection, addDoc } from 'firebase/firestore';
+import { ReportCategory } from './types';
 
 const reportSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters.'),
+  category: z.nativeEnum(ReportCategory),
   complainantName: z.string().min(1, 'Name is required.'),
   complainantPhone: z.string().min(1, 'Phone number is required.'),
   locationAddress: z.string().min(1, 'Address is required.'),
@@ -36,7 +37,7 @@ export async function submitReport(
     };
   }
 
-  const { photo, description, citizenId, complainantName, complainantPhone, locationAddress } = validatedFields.data;
+  const { photo, description, citizenId, complainantName, complainantPhone, locationAddress, category } = validatedFields.data;
   const { firestore } = await initializeAdminApp();
 
   try {
@@ -45,9 +46,6 @@ export async function submitReport(
       const moderationResult = await moderateImage({ photoDataUri: photo });
       finalImageUrl = moderationResult.moderatedPhotoDataUri;
     }
-    
-    // AI Classification
-    const classificationResult = await classifyReport({ description });
 
     const reportData = {
       citizenId,
@@ -56,8 +54,7 @@ export async function submitReport(
       locationAddress,
       description,
       imageUrl: finalImageUrl,
-      category: classificationResult.category,
-      urgency: classificationResult.urgency,
+      category,
       reportDate: new Date().toISOString(),
       status: 'Pending',
       upvotes: 0,
