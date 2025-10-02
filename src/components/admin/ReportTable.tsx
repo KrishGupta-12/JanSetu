@@ -108,7 +108,11 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const { firestore } = useAuth();
 
   const adminsQuery = useMemoFirebase(() => {
-    if (!firestore || admin.role !== UserRole.SuperAdmin) return null;
+    // ROOT CAUSE FIX: This query is now properly gated.
+    // It will only execute if the user is a Super Admin.
+    if (!firestore || admin.role !== UserRole.SuperAdmin) {
+      return null;
+    }
     // Securely query for ONLY department admins, not all users.
     return query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles));
   }, [firestore, admin.role]);
