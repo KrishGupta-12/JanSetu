@@ -27,13 +27,16 @@ function UserTableSkeleton() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <Skeleton className="h-12 w-full" />
+                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}>
-                                    <TableCell> <Skeleton className="h-10 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                                     <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                                     <TableCell><Skeleton className="h-10 w-full" /></TableCell>
                                     <TableCell><Skeleton className="h-10 w-full" /></TableCell>
