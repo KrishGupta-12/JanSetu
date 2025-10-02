@@ -87,15 +87,15 @@ export function SignupForm() {
         if (!auth || !firestore) return;
         
         try {
-            // A more reliable way is to check if admin@jancorp.com exists.
-            // This requires a function to get user by email, which is an admin-only SDK feature.
-            // For client-side, we try to sign-in and if it fails with user-not-found, we create it.
-            // This is not perfectly secure but sufficient for seeding.
-            
+            // Attempt to sign in as admin. If it fails with 'user-not-found', create the admin.
+            // This is a simple seeding mechanism.
             await signInWithEmailAndPassword(auth, 'admin@jancorp.com', 'admin123').catch(async (error) => {
                  if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
-                    const tempUser = auth.currentUser;
-                    
+                    // Temporarily store the current user if one exists
+                    const originalUser = auth.currentUser;
+                    if(originalUser) await signOut(auth);
+
+
                     const adminCredential = await createUserWithEmailAndPassword(auth, 'admin@jancorp.com', 'admin123');
                     const adminUser = adminCredential.user;
                     
@@ -121,28 +121,33 @@ export function SignupForm() {
                         state: 'Delhi'
                      });
                      
-                    // Sign out the newly created admin, and sign back in the original user if there was one.
+                    // Sign out the newly created admin user
                     await signOut(auth);
-                    if (tempUser) {
-                        // This part is tricky as we don't have the password.
-                        // For seeding, it's often better to run a separate script.
-                        // Or, we accept that the user is logged out after seeding.
-                    }
+
+                    // Re-authentication of original user is complex without credentials,
+                    // so for this seeding purpose, we accept they will be logged out.
                  }
             });
+            // Make sure to sign out after the check, so the signup form is usable.
+            if(auth.currentUser?.email === 'admin@jancorp.com'){
+              await signOut(auth);
+            }
 
         } catch (error) {
-           // This might fail if the user is already logged in. We can ignore for seeding.
-           console.log("Could not attempt admin seed.", error);
+           console.log("Could not attempt admin seed. This might be because a user is already signed in.", error);
         }
     };
 
     if (auth && firestore) {
-      seedAdmin();
+      // Don't run seeding if a user is already logged in and it's not the admin seeding user
+      if (!auth.currentUser) {
+         seedAdmin();
+      }
     }
   }, [auth, firestore]);
 
   useEffect(() => {
+    // This effect should only redirect if the user is already logged in when visiting the page.
     if (!isUserLoading && user) {
       router.push('/dashboard');
     }
@@ -152,11 +157,11 @@ export function SignupForm() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
+      const newUser = userCredential.user;
 
-      const citizenRef = doc(firestore, 'citizens', user.uid);
+      const citizenRef = doc(firestore, 'citizens', newUser.uid);
       await setDoc(citizenRef, {
-        id: user.uid,
+        id: newUser.uid,
         name: values.name,
         email: values.email,
         phone: values.phone,
@@ -208,7 +213,7 @@ export function SignupForm() {
       { value: '12', label: 'December' },
     ];
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 100 }, (_, i) => (currentYear - i).toString());
+  const years = Array.from({ length: 100 }, (_, i) => (currentYear - 18 - i).toString());
 
   return (
     <Form {...form}>

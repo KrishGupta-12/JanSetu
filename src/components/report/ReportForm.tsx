@@ -30,7 +30,8 @@ import { Input } from '@/components/ui/input';
 import { MapPin, Image as ImageIcon, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 import { submitReport, type FormState } from '@/lib/actions';
-import { reportCategories, ReportCategory } from '@/lib/types';
+import { ReportCategory } from '@/lib/types';
+import { reportCategories } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase';
 
