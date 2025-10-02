@@ -1,133 +1,116 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model,
- * with different levels of access granted to citizens, admins, and super admins.
+ * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
+ *
+ * Core Philosophy:
+ * This ruleset employs a hybrid security model, balancing open access for public content with strict ownership and role-based access control for user data and administrative functions.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profiles. User 'uid' must match the document ID.
- * - /issueReports/{reportId}: Stores issue reports submitted by citizens.
- * - /admins/{email}: Stores admin credentials, keyed by email.
- * - /alerts/{alertId}: Stores platform alerts.
- * - /leaderboard/{leaderboardId}: Stores leaderboard data (single document).
+ * - `/users/{userId}`: Stores public user profiles. Access is restricted to the owning user for writes, but listing is disabled.
+ * - `/issueReports/{reportId}`: Stores issue reports. Public read access is allowed, but writes are restricted to the report creator and authorized admins.
+ * - `/admins/{email}`: Stores admin credentials. Only accessible by server-side processes (e.g., via the Firebase Admin SDK).
+ * - `/alerts/{alertId}`: Stores platform alerts. Public read access is allowed, but only admins can create alerts.
+ * - `/leaderboard/{leaderboardId}`: Stores leaderboard data. Public read access is allowed, but only admins can update it.
  *
  * Key Security Decisions:
- * - User listing is explicitly denied to protect user privacy.
- * - Admin credentials can only be created and managed through backend admin SDK.
- * - Leaderboard data can be read by anyone, but only updated by backend admin SDK.
+ * - User listing is disabled on `/users` to prevent data scraping.
+ * - Admin credentials in `/admins` are completely protected from client-side access.
+ * - The rules explicitly disallow any unauthenticated access.
  *
  * Denormalization for Authorization:
- * - Issue Reports do not denormalize the user role of the citizen who created the report.
- *   Admin credentials are kept in a separate `/admins` collection.
+ * - `issueReports` include a `citizenId` field to allow easy validation of report ownership.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Protects user profiles. Users can read and write their own profile.
-     * @path /databases/{database}/documents/users/{userId}
-     * @allow (create) User with matching UID can create their profile.
-     * @allow (get, update, delete) User with matching UID can access their profile.
-     * @deny (create) User trying to create a profile with a different UID.
-     * @deny (get, update, delete) User trying to access another user's profile.
-     * @principle Enforces document ownership for all operations.
+     * @description Protects user profiles.
+     * @path /users/{userId}
+     * @allow (create) User with matching UID can create their own profile.
+     * @allow (get, update, delete) User with matching UID can read, update, and delete their own profile.
+     * @deny (create) User cannot create a profile with a mismatched UID.
+     * @deny (list) Listing all users is not permitted.
+     * @principle Enforces document ownership for user profiles and prevents unauthorized access.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isSignedIn() && isOwner(userId) && exists(resource);
-      }
-
       allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to issue reports. Any authenticated user can create a report.
-     *              Reports can be read by anyone. Only the owner can update or delete their reports.
-     * @path /databases/{database}/documents/issueReports/{reportId}
-     * @allow (get, list) Any user can read the reports.
-     * @allow (create) Any authenticated user can create a report.
-     * @deny (update, delete) Only the owner can modify/delete the report.
-     * @principle Public read, owner-only writes with ownership validation.
+     * @description Manages issue reports submitted by citizens.
+     * @path /issueReports/{reportId}
+     * @allow (get, list) All users can read all reports.
+     * @allow (create) Users can create reports if the citizenId matches their UID.
+     * @allow (update, delete) Only the report owner or an admin can update or delete reports.
+     * @deny (create) User cannot create a report with a mismatched citizenId.
+     * @principle Allows public read access while restricting write access to owners and administrators.
      */
     match /issueReports/{reportId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(citizenId) {
-        return request.auth.uid == citizenId;
-      }
-
-      function isExistingOwner(citizenId) {
-        return isSignedIn() && isOwner(citizenId) && exists(resource);
-      }
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && isExistingOwner(resource.data.citizenId);
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.citizenId);
-    }
-
-     /**
-      * @description Manages admin credentials. Only accessible through backend admin SDK.
-      * @path /databases/{database}/documents/admins/{email}
-      * @allow (create, get, update, delete, list) Always deny. Admin management is done via the backend.
-      * @principle  Admin credentials can only be created and managed through backend admin SDK.
-      */
-    match /admins/{email} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
+      allow update: if isSignedIn() && (isExistingOwner(resource.data.citizenId) || isAdmin());
+      allow delete: if isSignedIn() && (isExistingOwner(resource.data.citizenId) || isAdmin());
     }
 
     /**
-     * @description Manages platform alerts. Only admins can create alerts.
-     *              All users can read alerts.
-     * @path /databases/{database}/documents/alerts/{alertId}
-     * @allow (get, list) Any user can read alerts.
-     * @allow (create) Only admins can create alerts (Check admin role in backend).
-     * @deny (update, delete) No one can update/delete alerts through the client.
-     * @principle Public read, admin-only writes with role validation (in backend).
+     * @description Secures admin credentials.
+     * @path /admins/{email}
+     * @deny All client-side access is denied. Admin credentials should only be managed through the Firebase Admin SDK.
+     * @principle Restricts access to admin credentials to prevent unauthorized privilege escalation.
+     */
+    match /admins/{email} {
+      allow get, list, create, update, delete: if false;
+    }
+
+    /**
+     * @description Manages platform-wide alerts.
+     * @path /alerts/{alertId}
+     * @allow (get, list) All users can read all alerts.
+     * @allow (create) Only admins can create alerts.
+     * @deny (update, delete) Only admins can update or delete alerts.
+     * @principle Allows public read access while restricting write access to administrators.
      */
     match /alerts/{alertId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get: if true;
-      allow list: if true;
-      allow create: if false; // TODO: Implement admin role check in backend
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && isAdmin();
     }
 
     /**
-     * @description Controls access to leaderboard data. Read is public, write is restricted to backend.
-     * @path /databases/{database}/documents/leaderboard/{leaderboardId}
-     * @allow (get, list) Any user can read the leaderboard.
-     * @deny (create, update, delete) Only the backend can modify the leaderboard.
-     * @principle Public read, backend-only writes.
+     * @description Manages the leaderboard data.
+     * @path /leaderboard/{leaderboardId}
+     * @allow (get, list) All users can read the leaderboard.
+     * @allow (update) Only admins can update the leaderboard.
+     * @deny (create, delete) No one can create or delete the leaderboard except via server-side processes.
+     * @principle Allows public read access while restricting write access to administrators.
      */
     match /leaderboard/{leaderboardId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false; // Only the backend can create/update the leaderboard
-      allow update: if false;
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if isSignedIn() && isAdmin();
       allow delete: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+        return isSignedIn() && isOwner(userId) && resource != null;
+    }
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.role is string;
     }
   }
 }

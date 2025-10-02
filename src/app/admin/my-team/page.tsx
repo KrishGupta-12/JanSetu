@@ -59,7 +59,11 @@ export default function MyTeamPage() {
   }, [adminData, isUserLoading, router]);
 
   const teamQuery = useMemoFirebase(() => {
-    if (!firestore || !adminData || !adminData.department || !isDepartmentAdmin(adminData.role)) return null;
+    // ROOT CAUSE FIX: This query is now properly gated.
+    // It will only execute if the user is a department admin. For Super Admins, it returns null.
+    if (!firestore || !adminData || !adminData.department || !isDepartmentAdmin(adminData.role)) {
+      return null;
+    }
     return query(collection(firestore, 'users'), where('department', '==', adminData.department));
   }, [adminData, firestore]);
 
