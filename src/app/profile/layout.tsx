@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import AdminLayout from '@/app/admin/layout';
 import DashboardLayout from '@/app/dashboard/layout';
 import { UserRole } from '@/lib/types';
+import SuperAdminLayout from '../super_admin/layout';
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -17,8 +18,10 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  // If user has a role that is not citizen, they are an admin
-  if (user.role !== UserRole.Citizen) {
+  // Route to the correct layout based on user role
+  if (user.role === UserRole.SuperAdmin) {
+    return <SuperAdminLayout>{children}</SuperAdminLayout>;
+  } else if (user.role !== UserRole.Citizen) {
     return <AdminLayout>{children}</AdminLayout>;
   }
 

@@ -1,9 +1,8 @@
-
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, Files, Megaphone, Users2 } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, Files, Megaphone, Shield } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -23,11 +22,12 @@ import { Skeleton } from '../ui/skeleton';
 const isDepartmentAdmin = (role: UserRole) => DepartmentAdminRoles.includes(role);
 
 const allMenuItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
-  { href: '/admin/reports', label: 'Reports', icon: Files, roles: [UserRole.SuperAdmin]},
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [...DepartmentAdminRoles] },
+  { href: '/super_admin', label: 'Dashboard', icon: Shield, roles: [UserRole.SuperAdmin] },
+  { href: '/super_admin/reports', label: 'All Reports', icon: Files, roles: [UserRole.SuperAdmin] },
   { href: '/admin/my-department', label: 'My Department', icon: Building, roles: DepartmentAdminRoles },
-  { href: '/admin/users', label: 'Users', icon: Users, roles: [UserRole.SuperAdmin] },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart, roles: [UserRole.SuperAdmin] },
+  { href: '/super_admin/users', label: 'Users', icon: Users, roles: [UserRole.SuperAdmin] },
+  { href: '/super_admin/analytics', label: 'Analytics', icon: BarChart, roles: [UserRole.SuperAdmin] },
   { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
 ];
 
@@ -49,7 +49,12 @@ export default function AdminSidebar() {
   const menuItems = useMemo(() => {
       if (!adminData || !adminData.role) return [];
       const userRoles = [adminData.role];
-      return allMenuItems.filter(item => item.roles.some(r => userRoles.includes(r)));
+      if (adminData.role === UserRole.SuperAdmin) {
+        // Super admin sees their own items and shared items
+        return allMenuItems.filter(item => item.roles.includes(UserRole.SuperAdmin));
+      }
+      // Dept admin sees their own items and shared items
+      return allMenuItems.filter(item => item.roles.some(r => userRoles.includes(r) && r !== UserRole.SuperAdmin));
   }, [adminData]);
 
   const handleSignOut = () => {
@@ -67,7 +72,7 @@ export default function AdminSidebar() {
         {isLoading ? <SidebarSkeleton /> : (
             <SidebarMenu>
             {menuItems.map((item) => (
-                <SidebarMenuItem key={item.label}>
+                <SidebarMenuItem key={item.href}>
                 <Link href={item.href} passHref>
                     <SidebarMenuButton
                     isActive={pathname === item.href}

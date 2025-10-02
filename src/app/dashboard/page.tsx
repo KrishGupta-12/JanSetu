@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Report } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { ReportStatus, AdminRole } from '@/lib/types';
+import { ReportStatus, UserRole } from '@/lib/types';
 import { Files, Megaphone, Trophy } from 'lucide-react';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
@@ -46,8 +46,12 @@ export default function DashboardPage() {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-     if (!isUserLoading && user && user.role && user.role !== 'citizen') {
-      router.push('/admin');
+     if (!isUserLoading && user && user.role && user.role !== UserRole.Citizen) {
+       if (user.role === UserRole.SuperAdmin) {
+         router.push('/super_admin');
+       } else {
+         router.push('/admin');
+       }
     }
   }, [user, isUserLoading, router]);
 
