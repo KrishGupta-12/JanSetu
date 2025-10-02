@@ -26,10 +26,8 @@ export default function AdminDashboardPage() {
   const reportsQuery = useMemoFirebase(() => {
       if (!firestore || !adminData) return null;
       if (adminData.role === AdminRole.SuperAdmin) {
-        // Super admin sees all reports
         return collection(firestore, 'issue_reports');
       } else {
-        // Department admin sees only reports assigned to them
         return query(collection(firestore, 'issue_reports'), where('assignedAdminId', '==', user?.uid));
       }
   }, [firestore, adminData, user?.uid]);
@@ -38,7 +36,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (!isUserLoading && !isAdminLoading && (!user || !adminData)) {
-      router.push('/dashboard'); // Redirect non-admins to user dashboard
+      router.push('/dashboard'); 
     }
   }, [user, adminData, isUserLoading, isAdminLoading, router]);
   

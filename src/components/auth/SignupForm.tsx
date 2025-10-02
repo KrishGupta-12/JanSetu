@@ -84,7 +84,6 @@ export function SignupForm() {
 
 
   useEffect(() => {
-    // This check ensures seeding only runs once per session.
     if (sessionStorage.getItem('seeding_completed') !== 'true') {
       runSeed();
       sessionStorage.setItem('seeding_completed', 'true');

@@ -62,7 +62,6 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const loggedInUser = userCredential.user;
 
-      // Check if the user is an admin
       const adminRef = doc(firestore, 'admins', loggedInUser.uid);
       const adminSnap = await getDoc(adminRef);
 

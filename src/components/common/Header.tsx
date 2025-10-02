@@ -51,11 +51,11 @@ function HeaderAuth() {
         )}
         <Button variant="ghost" asChild>
           <Link href="/profile">
-            <UserCircle /> Profile
+            <UserCircle className="mr-2" /> Profile
           </Link>
         </Button>
-        <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
-          <LogOut />
+        <Button variant="ghost" onClick={handleSignOut}>
+          <LogOut className="mr-2" /> Sign Out
         </Button>
       </>
     );

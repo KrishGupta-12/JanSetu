@@ -4,10 +4,9 @@ import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { ReportCategory, ReportStatus } from './types';
-import { getAuth } from 'firebase/auth/web-extension';
-import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getFirestore, collection, getDocs, serverTimestamp, addDoc, doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
+import { getAuth } from 'firebase/auth';
 
 const reportSchema = z.object({
   category: z.nativeEnum(ReportCategory),
@@ -47,9 +46,10 @@ export async function submitReport(
   });
 
   if (!validatedFields.success) {
+    const firstError = Object.values(validatedFields.error.flatten().fieldErrors)[0]?.[0];
     return {
       status: 'error',
-      message: validatedFields.error.flatten().fieldErrors.description?.[0] || 'Invalid data provided.',
+      message: firstError || 'Invalid data provided.',
     };
   }
 
@@ -59,10 +59,8 @@ export async function submitReport(
     let moderatedPhotoUri: string | undefined = undefined;
 
     if (photo && photo.startsWith('data:image')) {
-      console.log('Moderating image...');
       const moderationResult = await moderateImage({ photoDataUri: photo });
       moderatedPhotoUri = moderationResult.moderatedPhotoDataUri;
-      console.log('Image moderation successful.');
     }
 
     const reportData = {
@@ -77,13 +75,14 @@ export async function submitReport(
         updatedAt: serverTimestamp()
     };
     
-    // Add to main issue_reports collection
     const issueReportsCollection = collection(firestore, 'issue_reports');
-    const newReportRef = await addDoc(issueReportsCollection, reportData);
+    const newReportRef = await addDoc(issueReportsCollection, { ...reportData });
 
-    // Also add to the user-specific subcollection
+    // Update the document with its own ID
+    await setDoc(doc(firestore, 'issue_reports', newReportRef.id), { id: newReportRef.id }, { merge: true });
+
     const userIssueReportRef = doc(firestore, `users/${citizenId}/issue_reports`, newReportRef.id);
-    await setDoc(userIssueReportRef, { ...reportData, id: newReportRef.id });
+    await setDoc(userIssueReportRef, { ...reportData, id: newReport_ref.id });
 
 
     return {
