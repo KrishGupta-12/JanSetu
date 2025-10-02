@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, User, UserCog, Shield } from 'lucide-react';
 import { AdminRole, UserProfile } from '@/lib/types';
 
@@ -57,7 +57,7 @@ export function LoginForm() {
   };
   
     // This effect will run when the user state changes after a successful login.
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             if (user.role) {
                 router.push('/admin');
