@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -9,17 +10,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger
-} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -28,18 +18,16 @@ import { Input } from '@/components/ui/input';
 import { MoreHorizontal, Ban, RotateCcw, Search, UserX, ShieldX, Files, ListChecks, Hourglass } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { add } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 
 type EnrichedCitizen = UserProfile & {
@@ -116,7 +104,6 @@ function UsersTableSkeleton() {
 
 export default function UsersPage() {
   const { user: adminUser, isLoading: isUserLoading, firestore } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,18 +111,17 @@ export default function UsersPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const citizensQuery = useMemoFirebase(() => {
-    if (!firestore || adminUser?.role !== UserRole.SuperAdmin) return null;
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore, adminUser]);
   const { data: citizens, isLoading: areCitizensLoading } = useCollection<UserProfile>(citizensQuery);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!firestore || adminUser?.role !== UserRole.SuperAdmin) return null;
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'issueReports'));
   }, [firestore, adminUser]);
   const { data: allReports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
-  // Redirect if not a super admin
   useEffect(() => {
     if (!isUserLoading && adminUser?.role !== UserRole.SuperAdmin) {
       router.push('/admin');
@@ -154,46 +140,10 @@ export default function UsersPage() {
     return enriched.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [citizens, searchQuery]);
   
-  
-  const handleBan = (citizenId: string, duration: Duration | 'lifetime') => {
-    if (!firestore) return;
-
-    const bannedUntil = duration === 'lifetime' ? 'lifetime' : add(new Date(), duration).toISOString();
-    
-    const userDocRef = doc(firestore, 'users', citizenId);
-    updateDocumentNonBlocking(userDocRef, { bannedUntil });
-
-    toast({
-      title: 'User Banned',
-      description: `User has been banned.`,
-    });
-  };
-
-  const handleUnban = (citizenId: string) => {
-    if (!firestore) return;
-
-    const userDocRef = doc(firestore, 'users', citizenId);
-    updateDocumentNonBlocking(userDocRef, { bannedUntil: null });
-
-     toast({
-      title: 'User Unbanned',
-      description: `User has been unbanned.`,
-    });
-  };
-  
   const handleViewDetails = (user: EnrichedCitizen) => {
       setSelectedUser(user);
       setIsDetailsOpen(true);
   }
-
-
-  const banDurations = [
-    { label: '1 Week', duration: { weeks: 1 } },
-    { label: '1 Month', duration: { months: 1 } },
-    { label: '6 Months', duration: { months: 6 } },
-    { label: '1 Year', duration: { years: 1 } },
-    { label: 'Lifetime', duration: 'lifetime' as const },
-  ];
   
   const isLoading = isUserLoading || areCitizensLoading || areReportsLoading;
 
@@ -216,7 +166,7 @@ export default function UsersPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Citizens</CardTitle>
-          <CardDescription>A list of all registered citizens. You can search, view details, and manage their status.</CardDescription>
+          <CardDescription>A list of all registered citizens. You can search and view details.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex w-full max-w-md items-center space-x-2 mb-4">
@@ -265,44 +215,10 @@ export default function UsersPage() {
                         <span className="font-medium">{user.resolvedReports} / {user.totalReports}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                       <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Admin Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleViewDetails(user)}>
-                                    <Search className="mr-2 h-4 w-4"/>
-                                    View Details & Reports
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {user.isBanned ? (
-                                    <DropdownMenuItem onClick={() => handleUnban(user.uid)}>
-                                        <RotateCcw className="mr-2 h-4 w-4" />
-                                        Unban User
-                                    </DropdownMenuItem>
-                                ) : (
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger>
-                                            <Ban className="mr-2 h-4 w-4 text-destructive" />
-                                            <span className="text-destructive">Ban User</span>
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuSubContent>
-                                            <DropdownMenuLabel>Select Ban Duration</DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            {banDurations.map(d => (
-                                                <DropdownMenuItem key={d.label} onClick={() => handleBan(user.uid, d.duration)}>
-                                                    {d.label}
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </DropdownMenuSubContent>
-                                    </DropdownMenuSub>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                       <Button variant="ghost" size="sm" onClick={() => handleViewDetails(user)}>
+                            <Search className="mr-2 h-4 w-4"/>
+                            View Details
+                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -336,6 +252,7 @@ export default function UsersPage() {
                                                 <TableHead>Report ID</TableHead>
                                                 <TableHead>Category</TableHead>
                                                 <TableHead>Description</TableHead>
+                                                <TableHead>Date Rejected</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -344,6 +261,7 @@ export default function UsersPage() {
                                                     <TableCell className="font-mono text-xs">{report.id.substring(0, 7)}</TableCell>
                                                     <TableCell>{report.category}</TableCell>
                                                     <TableCell className="max-w-sm truncate">{report.description}</TableCell>
+                                                    <TableCell>{report.resolution?.date ? new Date(report.resolution.date).toLocaleDateString() : 'N/A'}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>

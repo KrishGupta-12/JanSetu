@@ -53,9 +53,10 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, FieldValue, increment, where } from 'firebase/firestore';
+import { collection, query, doc, FieldValue, increment, where, getDocs } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAuth } from '@/hooks/useAuth';
+import { add, sub } from 'date-fns';
 
 
 const statusStyles: { [key in ReportStatus]: string } = {
@@ -126,11 +127,56 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
     }
     return filtered;
   }, [reports, urgencyFilter, categoryFilter]);
+
+   const handleAutoBanCheck = async (citizenId: string) => {
+    if (!firestore) return;
+    const thirtyDaysAgo = sub(new Date(), { days: 30 });
+    
+    const reportsRef = collection(firestore, 'issueReports');
+    const q = query(reportsRef, 
+        where('citizenId', '==', citizenId),
+        where('status', '==', ReportStatus.Rejected)
+    );
+
+    const querySnapshot = await getDocs(q);
+    const rejectedInLast30Days = querySnapshot.docs
+        .map(doc => doc.data() as Report)
+        .filter(report => report.resolution && new Date(report.resolution.date) > thirtyDaysAgo);
+
+    if (rejectedInLast30Days.length >= 5) {
+        const userRef = doc(firestore, 'users', citizenId);
+        const banExpiry = add(new Date(), { days: 60 });
+        updateDocumentNonBlocking(userRef, { bannedUntil: banExpiry.toISOString() });
+        toast({
+            variant: "destructive",
+            title: "User Automatically Banned",
+            description: `User ${citizenId.substring(0,5)} has been banned for 60 days due to having 5 or more rejected reports in the last 30 days.`
+        });
+    }
+  }
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
     if (!firestore) return;
     const reportDocRef = doc(firestore, 'issueReports', reportId);
-    updateDocumentNonBlocking(reportDocRef, { status });
+    
+    const report = reports.find(r => r.id === reportId);
+    if (!report) return;
+    
+    // Add resolution object for rejected status
+    if (status === ReportStatus.Rejected) {
+      const resolutionData: Resolution = {
+        adminId: admin.uid,
+        adminName: admin.name,
+        date: new Date().toISOString(),
+        summary: 'Report was rejected by administrator.',
+        cost: 0,
+        costBreakdown: 'N/A',
+      }
+       updateDocumentNonBlocking(reportDocRef, { status, resolution: resolutionData });
+       handleAutoBanCheck(report.citizenId);
+    } else {
+        updateDocumentNonBlocking(reportDocRef, { status });
+    }
 
     toast({
       title: 'Status Updated',
@@ -549,5 +595,3 @@ function ResolutionForm({ report, admin, onClose, onSave }: { report: Report | n
         </DialogContent>
     )
 }
-
-    
