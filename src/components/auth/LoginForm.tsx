@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -34,6 +35,7 @@ const formSchema = z.object({
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -47,19 +49,41 @@ export function LoginForm() {
   
   useEffect(() => {
     if (auth.currentUser) {
-      router.push('/dashboard');
+      // Check if user is admin on initial load
+      const checkAdminStatus = async () => {
+        const adminRef = doc(firestore, 'admins', auth.currentUser!.uid);
+        const adminSnap = await getDoc(adminRef);
+        if (adminSnap.exists()) {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      };
+      checkAdminStatus();
     }
-  }, [auth.currentUser, router]);
+  }, [auth.currentUser, router, firestore]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      router.push('/dashboard');
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // Check if the user is an admin
+      const adminRef = doc(firestore, 'admins', user.uid);
+      const adminSnap = await getDoc(adminRef);
+
+      if (adminSnap.exists()) {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+      
       toast({
           title: 'Success',
           description: 'Logged in successfully!',
       });
+
     } catch (error) {
       let errorMessage = 'An unexpected error occurred.';
       if (error instanceof FirebaseError) {

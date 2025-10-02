@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Home, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Home, Users, BarChart } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +17,8 @@ import { Button } from '../ui/button';
 
 const menuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart },
 ];
 
 export default function AdminSidebar() {
