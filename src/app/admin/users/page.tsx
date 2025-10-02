@@ -54,24 +54,23 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Query for all users who are citizens
-    return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
-  }, [firestore]);
-
-  const { data: users, isLoading: areUsersLoading, error } = useCollection<UserProfile>(usersQuery);
-
-  if (error) {
-    console.error("Firestore error fetching users:", error);
-  }
-
   // Effect to protect the route for super admins only
   useEffect(() => {
     if (!isUserLoading && (!adminUser || adminUser.role !== UserRole.SuperAdmin)) {
       router.push('/admin');
     }
   }, [isUserLoading, adminUser, router]);
+  
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
+    return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
+  }, [firestore, adminUser]);
+
+  const { data: users, isLoading: areUsersLoading, error } = useCollection<UserProfile>(usersQuery);
+
+  if (error) {
+    console.error("Firestore error fetching users:", error);
+  }
 
   const handleOpenManageDialog = (user: UserProfile) => {
     setSelectedUser(user);
@@ -109,7 +108,7 @@ export default function UsersPage() {
 
   const isLoading = isUserLoading || areUsersLoading;
 
-  if (isLoading || !adminUser) {
+  if (isLoading || !adminUser || adminUser.role !== UserRole.SuperAdmin) {
     return (
         <div className="space-y-6">
             <div>
@@ -195,7 +194,7 @@ export default function UsersPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                        {areUsersLoading ? 'Loading users...' : (error ? `Error loading users` : 'No citizen users found.')}
+                        {areUsersLoading ? 'Loading users...' : (error ? `Error loading users. Check security rules.` : 'No citizen users found.')}
                       </TableCell>
                     </TableRow>
                   )}
