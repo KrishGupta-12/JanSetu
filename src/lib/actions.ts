@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { initializeAdminApp } from '@/firebase/server-init';
-import { ReportCategory } from './types';
+import { ReportCategory, ReportStatus } from './types';
 
 const reportSchema = z.object({
   description: z.string().min(10, {
@@ -59,7 +59,7 @@ export async function submitReport(
       imageUrl: finalImageUrl,
       category,
       reportDate: new Date().toISOString(),
-      status: 'Pending',
+      status: ReportStatus.Pending,
       upvotes: 0,
       citizenIdsWhoUpvoted: [],
       // Urgency will be set by an admin
