@@ -8,7 +8,7 @@ import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 
 type LeaderboardEntry = {
@@ -63,11 +63,18 @@ function LeaderboardSkeleton() {
 
 
 export default function LeaderboardPage() {
-    const { firestore } = useAuth();
+    const { user, firestore } = useAuth();
 
     const citizensQuery = useMemoFirebase(() => {
       if (!firestore) return null;
-      return query(collection(firestore, 'users'), where('role', '==', 'citizen'));
+      // Securely fetch top citizens by pre-calculated score.
+      // We can't query all users, so we sort by score and take the top ones.
+      return query(
+          collection(firestore, 'users'), 
+          where('role', '==', 'citizen'),
+          orderBy('totalReports', 'desc'), // Using totalReports as a stand-in for score
+          limit(20)
+      );
     }, [firestore]);
     const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
     
@@ -85,6 +92,12 @@ export default function LeaderboardPage() {
         }).sort((a, b) => b.score - a.score);
     }, [citizens]);
 
+    const userRank = useMemo(() => {
+        if (!leaderboardData || !user) return null;
+        const rank = leaderboardData.findIndex(entry => entry.citizen.uid === user.uid);
+        return rank !== -1 ? rank + 1 : null;
+    }, [leaderboardData, user]);
+
     if (citizensLoading) {
         return <LeaderboardSkeleton />;
     }
@@ -97,6 +110,22 @@ export default function LeaderboardPage() {
                     Recognizing the most active and impactful citizens.
                 </p>
             </div>
+            
+            {user && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>My Rank</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {userRank ? (
+                             <p className="text-lg">You are ranked <span className="font-bold text-primary">#{userRank}</span> on the leaderboard. Keep up the great work!</p>
+                        ) : (
+                            <p className="text-muted-foreground">Your rank isn't in the top 20 yet. Submit a report to get on the board!</p>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle>Top Contributors</CardTitle>

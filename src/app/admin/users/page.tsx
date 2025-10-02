@@ -32,7 +32,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { add } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type EnrichedCitizen = UserProfile & {
@@ -83,9 +83,9 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('role', '==', 'citizen'))
-  }, [firestore]);
+    if (!firestore || adminUser?.role !== UserRole.SuperAdmin) return null;
+    return query(collection(firestore, 'users'), where('role', '==', 'citizen'), orderBy('dateJoined', 'desc'));
+  }, [firestore, adminUser]);
   const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(usersQuery);
 
   const reportsQuery = useMemoFirebase(() => {
@@ -153,6 +153,15 @@ export default function UsersPage() {
 
   if (isLoadingPage) {
     return <UserTableSkeleton />;
+  }
+  
+  if (adminUser?.role !== UserRole.SuperAdmin) {
+    return (
+        <Card>
+            <CardHeader><CardTitle>Permission Denied</CardTitle></CardHeader>
+            <CardContent><p>You do not have permission to view this page.</p></CardContent>
+        </Card>
+    )
   }
 
   return (
