@@ -59,10 +59,10 @@ export async function submitReport(
 
     const reportData = {
         ...validatedFields.data,
-        imageUrl: moderatedPhotoDataUri || validatedFields.data.photo || '',
+        imageUrl: moderatedPhotoDataUri || '',
         category: classificationResult.category,
         urgency: classificationResult.urgency,
-        reportDate: serverTimestamp(),
+        reportDate: new Date().toISOString(),
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         status: 'Pending',

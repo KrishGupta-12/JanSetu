@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Loader2, User, UserCog, Shield } from 'lucide-react';
-import { mockCitizens, mockAdmins } from '@/lib/data';
+import { mockAdmins } from '@/lib/data';
 import { AdminRole } from '@/lib/types';
 
 type DemoUser = {
@@ -40,9 +40,7 @@ export function LoginForm() {
     const result = await login(email, password);
 
     if (result.success) {
-      // The useAuth hook will handle fetching the user profile and redirecting.
-      // We can optimistically check the email to decide where to navigate.
-      const isAdmin = demoUsers.find(u => u.email === email && (u.role === 'Admin' || u.role === 'Municipal Head'));
+      const isAdmin = mockAdmins.find(u => u.email === email);
       
       toast({
         title: 'Success',

@@ -11,8 +11,8 @@ export enum ReportStatus {
   InProgress = 'In Progress',
   Resolved = 'Resolved',
   Rejected = 'Rejected',
-  PendingApproval = 'Pending Approval', // New status for after admin submission
-  PendingCitizenFeedback = 'Pending Citizen Feedback', // New status
+  PendingApproval = 'Pending Approval',
+  PendingCitizenFeedback = 'Pending Citizen Feedback',
 }
 
 export type ReportUrgency = 'Low' | 'Medium' | 'High' | 'Critical';
@@ -20,15 +20,15 @@ export type ReportUrgency = 'Low' | 'Medium' | 'High' | 'Critical';
 export type Resolution = {
   adminId: string;
   adminName: string;
-  date: string; // ISO string
+  date: string; 
   summary: string;
   cost: number;
   costBreakdown: string;
   afterImageUrl?: string;
   citizenFeedback?: string;
-  citizenRating?: number; // e.g., 1-5
+  citizenRating?: number; 
   superAdminFeedback?: string;
-  superAdminRating?: number; // e.g., 1-5
+  superAdminRating?: number; 
   isApproved?: boolean;
 };
 
@@ -40,7 +40,7 @@ export type Report = {
   latitude: number;
   longitude: number;
   imageUrl: string;
-  reportDate: string; // ISO string
+  reportDate: string; 
   status: ReportStatus;
   urgency?: ReportUrgency;
   assignedAdminId?: string;
@@ -62,17 +62,17 @@ export type AqiSensor = {
 
 export type UserProfile = {
   uid: string;
-  janId: string;
+  janId?: string;
   name: string;
   email: string;
-  phone: string;
-  dateJoined: string; // ISO string
-  dob?: string; // yyyy-mm-dd
+  phone?: string;
+  dateJoined: string; 
+  dob?: string; 
   address?: string;
   city?: string;
   state?: string;
-  bannedUntil?: string | 'lifetime' | null; // ISO string, 'lifetime', or null
-  role?: AdminRole;
+  bannedUntil?: string | 'lifetime' | null; 
+  role?: AdminRole | null;
   department?: ReportCategory;
 };
 
@@ -87,9 +87,5 @@ export type Admin = UserProfile & {
 };
 
 export type Citizen = UserProfile & {
-    role: undefined;
+    role: null;
 }
-
-
-// A generic user type for the auth context
-export type User = UserProfile;

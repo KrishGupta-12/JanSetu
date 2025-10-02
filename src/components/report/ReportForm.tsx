@@ -116,7 +116,7 @@ export default function ReportForm() {
       setPhotoPreview(null);
       setLocationStatus('idle');
       formRef.current?.reset();
-      router.push('/dashboard');
+      router.push('/dashboard/my-reports');
     } else if (formState.status === 'error') {
       toast({
         variant: 'destructive',
@@ -176,7 +176,7 @@ export default function ReportForm() {
     <>
       <Form {...form}>
         <form ref={formRef} action={dispatch} className="space-y-8">
-           <input type="hidden" name="citizenId" value={user.uid} />
+           {user && <input type="hidden" name="citizenId" value={user.uid} />}
           <FormField
             control={form.control}
             name="category"
