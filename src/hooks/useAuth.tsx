@@ -5,7 +5,6 @@ import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAn
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useFirebase, useFirestore } from '@/firebase';
 import { UserProfile } from '@/lib/types';
-import { generateJanId } from '@/lib/utils';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { mockAdmins } from '@/lib/data'; 
 
@@ -88,11 +87,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const { uid } = userCredential.user;
-        const janId = await generateJanId(firestore, 'citizen');
 
         const newUserProfile: UserProfile = {
             uid,
-            janId,
             name,
             email,
             phone: '',
@@ -100,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         
         const userDocRef = doc(firestore, 'users', uid);
-        setDocumentNonBlocking(userDocRef, newUserProfile, { merge: false });
+        await setDoc(userDocRef, newUserProfile, { merge: false });
         
         setUser(newUserProfile);
 

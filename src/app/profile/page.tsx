@@ -126,7 +126,7 @@ export default function ProfilePage() {
                     <CardHeader>
                         <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
                         <CardDescription>
-                            Your unique JanSetu ID is <strong>{user.janId}</strong>.
+                            Welcome, {user.name}!
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
