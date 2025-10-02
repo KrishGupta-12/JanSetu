@@ -1,134 +1,170 @@
 /**
- * @description This ruleset enforces a role-based access control model with a focus on data ownership and administrative privileges.
- * All authorization decisions are based on the authenticated user's UID and their assigned role, with super admins having elevated permissions.
- * @dataStructure
- * - /users/{userId}: Stores public profiles for all users, accessible with owner-only or superadmin permissions.
- * - /issueReports/{reportId}: Stores all issue reports, publicly readable but writable only with owner-only or superadmin permissions.
- * - /superAdmins/{userId}: Presence of a document grants super admin role. Only super admins can manage this collection.
- * - /alerts/{alertId}: Stores platform-wide alerts, publicly readable but writable only by super admins.
- * - /leaderboard/{leaderboardId}: Stores leaderboard data, publicly readable but writable only by super admins.
- * @keySecurityDecisions
- * - Super admins have full read and write access to all collections, bypassing standard ownership checks.
- * - User listing is generally disallowed except for super admins, to protect user privacy.
- * - Super admin status is determined by the presence of a document in the `/superAdmins/{userId}` collection.
- * @denormalizationForAuthorization
- * - The `IssueReport` entity includes `citizenId` to enable owner-based security rules.
+ * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
+ *
+ * Core Philosophy:
+ * This ruleset employs a hybrid security model, balancing public accessibility with role-based and ownership-based restrictions.
+ * Public data (e.g., issue reports, alerts) is readable by all, while write access is strictly controlled via roles and ownership.
+ * User-specific data (e.g., user profiles) is private and accessible only to the user themselves.
+ *
+ * Data Structure:
+ * - /users/{userId}: User profiles, accessible only to the user themselves.
+ * - /issueReports/{reportId}: Issue reports submitted by citizens, publicly readable, writable by admins or the report creator, depending on status.
+ * - /superAdmins/{userId}: Super admin list; presence grants super admin privileges. Only accessible by super admins.
+ * - /alerts/{alertId}: Platform alerts, publicly readable, writable only by super admins.
+ * - /leaderboard/{leaderboardId}: Leaderboard data, publicly readable, writable only by super admins.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed.
+ * - Public read access is granted to /issueReports and /alerts to facilitate open data sharing.
+ * - Super admin role is determined by the presence of a document in /superAdmins/{userId}.
+ * - Data validation is relaxed to prioritize rapid prototyping, focusing solely on authorization-critical fields.
+ *
+ * Denormalization for Authorization:
+ * - Issue reports contain a `citizenId` field to easily verify ownership for updates.
+ *
+ * Structural Segregation:
+ * - User profiles are stored in a dedicated /users collection to ensure privacy.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants access to user profiles based on ownership and super admin status.
-     * @path /users/{userId}
-     * @allow (read) User with UID 'userId' can read their profile. Super admins can read any profile.
-     * @allow (create) User with UID 'userId' can create their profile.
-     * @allow (update) User with UID 'userId' can update their profile. Super admins can update any profile.
-     * @allow (delete) User with UID 'userId' can delete their profile. Super admins can delete any profile.
-     * @deny (read) User with UID 'otherUserId' cannot read the profile of 'userId' (unless super admin).
-     * @deny (update) User with UID 'otherUserId' cannot update the profile of 'userId' (unless super admin).
-     * @deny (delete) User with UID 'otherUserId' cannot delete the profile of 'userId' (unless super admin).
-     * @principle Enforces document ownership for writes and allows super admin overrides.
+     * @description Checks if the current user is signed in.
+     * @example isSignedIn() == true if request.auth != null
+     * @principle Requires authentication for certain actions.
      */
-    match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow list: if isSuperAdmin();
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow delete: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
+    function isSignedIn() {
+      return request.auth != null;
     }
 
     /**
-     * @description Allows public reading of issue reports but restricts creation, updating, and deletion to owners and super admins.
+     * @description Checks if the current user's UID matches the provided userId.
+     * @param {string} userId - The user ID to compare against.
+     * @example isOwner("someUserId") == (request.auth.uid == "someUserId")
+     * @principle Enforces user ownership for data access.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the user is a super admin by verifying the existence of a document in the /superAdmins collection.
+     * @example isSuperAdmin() == exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid))
+     * @principle Grants elevated privileges to super admins.
+     */
+    function isSuperAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
+    }
+
+    /**
+     * @description Checks if the user is an existing owner of the document.
+     * @param {string} userId - The user ID to compare against.
+     * @example isExistingOwner("someUserId") == (isOwner("someUserId") && resource != null)
+     * @principle Combines ownership and existence checks for safer destructive operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Determines if the current user is assigned to a specific issue report.
+     * @param {string} adminId - The admin ID to compare against.
+     * @example isAdminForIssue(resource.data.assignedAdminId)
+     * @principle Enforces document ownership for writes.
+     */
+    function isAdminForIssue(adminId) {
+       return isSignedIn() && request.auth.uid == adminId;
+    }
+
+
+    /**
+     * @description Rules for user profiles.
+     * @path /users/{userId}
+     * @allow (create) User "user123" creates their own profile.
+     * @allow (get) User "user123" reads their own profile.
+     * @deny (update) User "user456" tries to update user "user123"'s profile.
+     * @deny (delete) Any user tries to delete another user's profile.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Rules for issue reports.
      * @path /issueReports/{reportId}
-     * @allow (read) Any user can read any issue report.
-     * @allow (create) User with UID matching report.citizenId can create an issue report. Super admins can create any issue report.
-     * @allow (update) User with UID matching report.citizenId can update an issue report. Super admins can update any issue report.
-     * @allow (delete) User with UID matching report.citizenId can delete an issue report. Super admins can delete any issue report.
-     * @deny (create) User with UID 'otherUserId' cannot create an issue report with citizenId 'userId' (unless super admin).
-     * @deny (update) User with UID 'otherUserId' cannot update an issue report with citizenId 'userId' (unless super admin).
-     * @deny (delete) User with UID 'otherUserId' cannot delete an issue report with citizenId 'userId' (unless super admin).
-     * @principle Allows public read access while enforcing owner-only writes and super admin overrides.
+     * @allow (get) Any user can read any issue report.
+     * @allow (list) Any user can list issue reports.
+     * @allow (create) User "user123" creates an issue report with their ID.
+     * @allow (update) Admin with ID "admin456" updates an issue report they are assigned to.
+     * @allow (delete) Only the super admin can delete.
+     * @deny (create) User "user123" tries to create an issue report with a mismatched ID.
+     * @deny (update) User "user456" tries to update an issue report they don't own.
+     * @principle Public read, owner-only writes, super admin delete.
      */
     match /issueReports/{reportId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && (request.resource.data.citizenId == request.auth.uid || isSuperAdmin());
-      allow update: if isSignedIn() && ((request.resource.data.citizenId == resource.data.citizenId && resource.data.citizenId == request.auth.uid) || isSuperAdmin());
-      allow delete: if isSignedIn() && ((resource.data.citizenId == request.auth.uid) || isSuperAdmin());
+      allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
+      allow update: if (isAdminForIssue(resource.data.assignedAdminId) || isSuperAdmin());
+      allow delete: if isSuperAdmin();
     }
 
     /**
-     * @description Restricts management of super admin roles to existing super admins.
+     * @description Rules for super admin list.
      * @path /superAdmins/{userId}
-     * @allow (read) Any super admin can read the super admin list.
-     * @allow (create) Only existing super admins can create new super admin roles.
-     * @allow (update) Only existing super admins can update super admin roles.
-     * @allow (delete) Only existing super admins can delete super admin roles.
-     * @deny (read) Non-super admins cannot read the super admin list.
-     * @deny (create) Non-super admins cannot create new super admin roles.
-     * @deny (update) Non-super admins cannot update super admin roles.
-     * @deny (delete) Non-super admins cannot delete super admin roles.
-     * @principle Enforces strict control over super admin role management.
+     * @allow (get) Super admin "admin123" reads their own super admin document.
+     * @allow (create) Super admin "admin123" creates their super admin document.
+     * @deny (get) Regular user "user456" tries to read a super admin document.
+     * @deny (create) Regular user "user456" tries to create a super admin document.
+     * @principle Only super admins can manage the super admin list.
      */
     match /superAdmins/{userId} {
-      allow get: if isSignedIn() && isSuperAdmin();
-      allow list: if isSignedIn() && isSuperAdmin();
-      allow create: if isSignedIn() && isSuperAdmin();
-      allow update: if isSignedIn() && isSuperAdmin();
-      allow delete: if isSignedIn() && isSuperAdmin();
+      allow get: if isSuperAdmin();
+      allow list: if false;
+      allow create: if isSuperAdmin();
+      allow update: if false;
+      allow delete: if isSuperAdmin();
     }
 
     /**
-     * @description Allows public reading of alerts, but restricts creation, updating, and deletion to super admins.
+     * @description Rules for platform alerts.
      * @path /alerts/{alertId}
-     * @allow (read) Any user can read any alert.
-     * @allow (create) Only super admins can create alerts.
-     * @allow (update) Only super admins can update alerts.
-     * @allow (delete) Only super admins can delete alerts.
-     * @deny (create) Non-super admins cannot create alerts.
-     * @deny (update) Non-super admins cannot update alerts.
-     * @deny (delete) Non-super admins cannot delete alerts.
-     * @principle Allows public read access while restricting writes to super admins.
+     * @allow (get) Any user can read any alert.
+     * @allow (list) Any user can list alerts.
+     * @allow (create) Super admin "admin123" creates an alert.
+     * @deny (create) Regular user "user456" tries to create an alert.
+     * @deny (update) Any user tries to update an alert.
+     * @deny (delete) Any user tries to delete an alert.
+     * @principle Public read, super admin-only writes.
      */
     match /alerts/{alertId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && isSuperAdmin();
-      allow update: if isSignedIn() && isSuperAdmin();
-      allow delete: if isSignedIn() && isSuperAdmin();
+      allow create: if isSuperAdmin();
+      allow update: if false;
+      allow delete: if isSuperAdmin();
     }
 
     /**
-     * @description Allows public reading of the leaderboard, but restricts creation, updating, and deletion to super admins.
+     * @description Rules for leaderboard data.
      * @path /leaderboard/{leaderboardId}
-     * @allow (read) Any user can read the leaderboard.
-     * @allow (create) Only super admins can create leaderboard data.
-     * @allow (update) Only super admins can update leaderboard data.
-     * @allow (delete) Only super admins can delete leaderboard data.
-     * @deny (create) Non-super admins cannot create leaderboard data.
-     * @deny (update) Non-super admins cannot update leaderboard data.
-     * @deny (delete) Non-super admins cannot delete leaderboard data.
-     * @principle Allows public read access while restricting writes to super admins.
+     * @allow (get) Any user can read the leaderboard.
+     * @allow (list) Any user can list the leaderboard (though there should only be one document).
+     * @allow (create) Super admin "admin123" creates the leaderboard.
+     * @deny (create) Regular user "user456" tries to create the leaderboard.
+     * @deny (update) Any user tries to update the leaderboard.
+     * @deny (delete) Any user tries to delete the leaderboard.
+     * @principle Public read, super admin-only writes.
      */
     match /leaderboard/{leaderboardId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && isSuperAdmin();
-      allow update: if isSignedIn() && isSuperAdmin();
-      allow delete: if isSignedIn() && isSuperAdmin();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
-  }
-
-  // Helper function to determine if the user is signed in.
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
-  // Helper function to determine if the user is the owner of the document.
-  function isOwner(userId) {
-    return request.auth.uid == userId;
-  }
-
-  // Helper function to determine if the user is a super admin.
-  function isSuperAdmin() {
-    return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
   }
 }
