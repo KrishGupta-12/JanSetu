@@ -6,8 +6,7 @@ import { moderateImage } from '@/ai/flows/image-moderation';
 import { classifyReport } from '@/ai/flows/classify-report';
 import { ReportCategory } from './types';
 import { initializeAdminApp } from '@/firebase/server-init';
-import { collection, addDoc, query, getDocs } from 'firebase/firestore';
-import { Report } from './types';
+import { collection, addDoc } from 'firebase/firestore';
 
 const reportSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters.'),
@@ -47,10 +46,10 @@ export async function submitReport(
   const { firestore } = await initializeAdminApp();
 
   try {
-    let moderatedPhotoDataUri: string | undefined = undefined;
+    let finalImageUrl = '';
     if (photo && photo.startsWith('data:image')) {
       const moderationResult = await moderateImage({ photoDataUri: photo });
-      moderatedPhotoDataUri = moderationResult.moderatedPhotoDataUri;
+      finalImageUrl = moderationResult.moderatedPhotoDataUri;
     }
     
     // AI Classification
@@ -62,7 +61,7 @@ export async function submitReport(
       complainantPhone,
       locationAddress,
       description,
-      imageUrl: moderatedPhotoDataUri || '',
+      imageUrl: finalImageUrl,
       category: classificationResult.category,
       urgency: classificationResult.urgency,
       reportDate: new Date().toISOString(),

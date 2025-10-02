@@ -41,7 +41,7 @@ export type Report = {
   locationAddress: string;
   category: ReportCategory;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
   reportDate: string; 
   status: ReportStatus;
   urgency?: ReportUrgency;
