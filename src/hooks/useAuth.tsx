@@ -108,7 +108,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         phone: additionalData.phone || '',
         address: additionalData.address || '',
         dateJoined: new Date().toISOString(),
-        role: UserRole.Citizen, 
+        role: UserRole.Citizen,
+        totalReports: 0,
+        resolvedReports: 0, 
     };
     
     const userDocRef = doc(firestore, 'users', uid);

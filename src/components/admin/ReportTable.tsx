@@ -53,7 +53,7 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, FieldValue, increment } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -173,7 +173,12 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   
   const handleSaveResolution = (reportId: string, resolutionData: Omit<Resolution, 'adminId' | 'adminName' | 'date'>) => {
     if (!firestore) return;
+    const report = reports.find(r => r.id === reportId);
+    if (!report) return;
+
     const reportDocRef = doc(firestore, 'issueReports', reportId);
+    const userDocRef = doc(firestore, 'users', report.citizenId);
+
     const updateData = {
       status: ReportStatus.PendingCitizenFeedback,
       resolution: {
@@ -183,6 +188,9 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
         date: new Date().toISOString(),
       }
     };
+    
+    // We only increment the resolved reports count *after* the super admin approves.
+    // So no user profile update here.
     updateDocumentNonBlocking(reportDocRef, updateData);
     setIsResolutionFormOpen(false);
     toast({ title: "Resolution Submitted", description: "Waiting for citizen feedback."});
@@ -190,11 +198,21 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
 
   const handleApproveWork = (reportId: string) => {
     if (!firestore) return;
+    const report = reports.find(r => r.id === reportId);
+    if (!report) return;
+
     const reportDocRef = doc(firestore, 'issueReports', reportId);
+    const userDocRef = doc(firestore, 'users', report.citizenId);
+
      updateDocumentNonBlocking(reportDocRef, { 
        status: ReportStatus.Resolved,
        'resolution.isApproved': true 
       });
+      
+    updateDocumentNonBlocking(userDocRef, {
+        resolvedReports: increment(1)
+    });
+
      toast({ title: "Work Approved", description: "This report is now marked as resolved."});
      setIsDetailViewOpen(false);
   }

@@ -3,7 +3,8 @@
 
 import { z } from 'zod';
 import { initializeAdminApp } from '@/firebase/server-init';
-import { ReportCategory, ReportStatus } from './types';
+import { ReportCategory, ReportStatus, UserProfile } from './types';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const reportSchema = z.object({
   description: z.string().min(10, {
@@ -58,9 +59,25 @@ export async function submitReport(
       citizenIdsWhoUpvoted: [],
       urgency: 'Medium', // Default urgency, admin can change
     };
+    
+    // Use a transaction to create the report and update the user's report count
+    const userRef = firestore.collection('users').doc(citizenId);
+    const reportRef = firestore.collection('issueReports').doc();
 
-    const reportsCollection = firestore.collection('issueReports');
-    await reportsCollection.add(reportData);
+    await firestore.runTransaction(async (transaction) => {
+      // It's good practice to read the user doc first in a transaction,
+      // though here we are just incrementing.
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) {
+        throw new Error("User profile does not exist!");
+      }
+
+      transaction.set(reportRef, reportData);
+      transaction.update(userRef, {
+        totalReports: FieldValue.increment(1)
+      });
+    });
+
 
     return {
       status: 'success',

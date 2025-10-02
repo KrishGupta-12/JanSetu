@@ -74,6 +74,8 @@ export type UserProfile = {
   bannedUntil?: string | 'lifetime' | null; 
   role: UserRole;
   department?: ReportCategory;
+  totalReports: number;
+  resolvedReports: number;
 };
 
 

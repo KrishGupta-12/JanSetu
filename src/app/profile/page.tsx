@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
@@ -54,17 +55,18 @@ export default function ProfilePage() {
   const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
 
   const userStats = useMemo(() => {
-    if (!userReports) return { total: 0, resolved: 0, inProgress: 0, rejected: 0, score: 0 };
-    const resolved = userReports.filter(r => r.status === ReportStatus.Resolved).length;
-    const score = resolved * 5 + userReports.length;
+    if (!user) return { total: 0, resolved: 0, inProgress: 0, rejected: 0, score: 0 };
+    const score = (user.resolvedReports || 0) * 5 + (user.totalReports || 0);
+    const rejected = (userReports || []).filter(r => r.status === ReportStatus.Rejected).length;
+    const inProgress = (userReports || []).filter(r => r.status === ReportStatus.InProgress).length;
     return {
-        total: userReports.length,
-        resolved,
-        inProgress: userReports.filter(r => r.status === ReportStatus.InProgress).length,
-        rejected: userReports.filter(r => r.status === ReportStatus.Rejected).length,
+        total: user.totalReports,
+        resolved: user.resolvedReports,
+        inProgress: inProgress,
+        rejected: rejected,
         score,
     }
-  }, [userReports]);
+  }, [user, userReports]);
   
   const contribution = getContributionLevel(userStats.score);
 

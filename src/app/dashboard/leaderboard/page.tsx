@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -70,33 +71,21 @@ export default function LeaderboardPage() {
     }, [firestore]);
     const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
     
-    const reportsQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'issueReports'));
-    }, [firestore]);
-    const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+    const leaderboardData: LeaderboardEntry[] = useMemo(() => {
+        if (!citizens) return [];
 
-    const leaderboardData = useMemo(() => {
-        if (!citizens || !reports) return [];
-
-        const citizenScores = citizens.map(citizen => {
-            const userReports = reports.filter(r => r.citizenId === citizen.uid);
-            const resolvedReports = userReports.filter(r => r.status === ReportStatus.Resolved).length;
-            const score = resolvedReports * 5 + userReports.length;
+        return citizens.map(citizen => {
+            const score = (citizen.resolvedReports || 0) * 5 + (citizen.totalReports || 0);
             return {
                 citizen,
                 score,
-                totalReports: userReports.length,
-                resolvedReports
+                totalReports: citizen.totalReports || 0,
+                resolvedReports: citizen.resolvedReports || 0,
             };
-        });
+        }).sort((a, b) => b.score - a.score);
+    }, [citizens]);
 
-        return citizenScores.sort((a, b) => b.score - a.score);
-    }, [citizens, reports]);
-
-    const isLoading = citizensLoading || reportsLoading;
-
-    if (isLoading) {
+    if (citizensLoading) {
         return <LeaderboardSkeleton />;
     }
 
