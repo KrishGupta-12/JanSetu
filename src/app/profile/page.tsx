@@ -45,6 +45,7 @@ export default function ProfilePage() {
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -82,6 +83,7 @@ export default function ProfilePage() {
       if(user) {
           setName(user.name || '');
           setPhone(user.phone || '');
+          setDob(user.dob || '');
           setAddress(user.address || '');
           setCity(user.city || 'Chandigarh');
           setState(user.state || 'Chandigarh');
@@ -92,7 +94,7 @@ export default function ProfilePage() {
       if (!user) return;
       setIsSaving(true);
       
-      const updatedData = { name, phone, address, city, state };
+      const updatedData = { name, phone, dob, address, city, state };
       updateUser(updatedData);
 
       toast({ title: 'Success', description: 'Profile updated successfully.' });
@@ -178,7 +180,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="dob">Date of Birth</Label>
-                            <Input id="dob" value={user.dob || ''} disabled />
+                            <Input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="address">Address</Label>
