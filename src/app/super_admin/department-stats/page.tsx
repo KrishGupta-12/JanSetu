@@ -28,12 +28,14 @@ function DepartmentStatsSkeleton() {
                   <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                   <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                   <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                  <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell><Skeleton className="h-6 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                   </TableRow>
@@ -51,6 +53,7 @@ interface DepartmentStat {
     department: ReportCategory;
     totalAssigned: number;
     totalResolved: number;
+    totalPending: number;
 }
 
 export default function DepartmentStatsPage() {
@@ -75,11 +78,11 @@ export default function DepartmentStatsPage() {
   const departmentStats = useMemo(() => {
     if (!reports) return [];
 
-    const stats: Record<string, { totalAssigned: number; totalResolved: number }> = {};
+    const stats: Record<string, { totalAssigned: number; totalResolved: number; totalPending: number }> = {};
 
     Object.values(ReportCategory).forEach(cat => {
         if(cat !== ReportCategory.Other) {
-            stats[cat] = { totalAssigned: 0, totalResolved: 0 };
+            stats[cat] = { totalAssigned: 0, totalResolved: 0, totalPending: 0 };
         }
     });
 
@@ -88,6 +91,8 @@ export default function DepartmentStatsPage() {
             stats[report.category].totalAssigned++;
             if (report.status === ReportStatus.Resolved) {
                 stats[report.category].totalResolved++;
+            } else if (report.status !== ReportStatus.Rejected) {
+                stats[report.category].totalPending++;
             }
         }
     });
@@ -123,15 +128,16 @@ export default function DepartmentStatsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Department</TableHead>
-                    <TableHead>Total Assigned Reports</TableHead>
-                    <TableHead>Total Resolved Reports</TableHead>
+                    <TableHead>Total Assigned</TableHead>
+                    <TableHead>Pending</TableHead>
+                    <TableHead>Resolved</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     Array.from({ length: 4 }).map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell>
+                        <TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell>
                       </TableRow>
                     ))
                   ) : departmentStats.length > 0 ? (
@@ -139,12 +145,13 @@ export default function DepartmentStatsPage() {
                       <TableRow key={stat.department}>
                         <TableCell className="font-medium">{stat.department}</TableCell>
                         <TableCell>{stat.totalAssigned}</TableCell>
-                        <TableCell>{stat.totalResolved}</TableCell>
+                        <TableCell className="font-semibold text-yellow-600">{stat.totalPending}</TableCell>
+                        <TableCell className="font-semibold text-green-600">{stat.totalResolved}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
                         No department data available.
                       </TableCell>
                     </TableRow>
@@ -157,3 +164,4 @@ export default function DepartmentStatsPage() {
     </div>
   );
 }
+
