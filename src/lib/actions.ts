@@ -25,7 +25,6 @@ export type FormState = {
 };
 
 export async function submitReport(
-  prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
   const validatedFields = reportSchema.safeParse({

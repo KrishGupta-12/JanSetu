@@ -1,8 +1,6 @@
 
 'use client';
 
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Image as ImageIcon, Loader2, Ban } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-import { submitReport, type FormState } from '@/lib/actions';
+import { submitReport } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -42,28 +40,11 @@ const reportFormSchema = z.object({
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
 
-const initialState: FormState = {
-  status: 'idle',
-  message: '',
-};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {pending ? 'Submitting...' : 'Submit Report'}
-    </Button>
-  );
-}
-
 export default function ReportForm() {
   const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-  const [formState, dispatch] = useActionState(submitReport, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
   const isBanned = useMemo(() => {
@@ -104,25 +85,6 @@ export default function ReportForm() {
     }
   }, [user, isUserLoading, router, toast]);
 
-  useEffect(() => {
-    if (formState.status === 'success') {
-      toast({
-        title: 'Success!',
-        description: formState.message,
-      });
-      form.reset();
-      setPhotoPreview(null);
-      formRef.current?.reset();
-      router.push('/dashboard/my-reports');
-    } else if (formState.status === 'error') {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: formState.message,
-      });
-    }
-  }, [formState, toast, form, router]);
-
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -135,6 +97,35 @@ export default function ReportForm() {
       reader.readAsDataURL(file);
     }
   };
+
+  async function onSubmit(values: ReportFormValues) {
+    setIsSubmitting(true);
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, value]) => {
+        if (value) {
+            formData.append(key, value);
+        }
+    });
+
+    const result = await submitReport(formData);
+
+    if (result.status === 'success') {
+      toast({
+        title: 'Success!',
+        description: result.message,
+      });
+      form.reset();
+      setPhotoPreview(null);
+      router.push('/dashboard/my-reports');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result.message,
+      });
+    }
+    setIsSubmitting(false);
+  }
 
   if (isUserLoading || !user) {
       return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin"/></div>
@@ -156,7 +147,7 @@ export default function ReportForm() {
   return (
     <>
       <Form {...form}>
-        <form ref={formRef} action={dispatch} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
            <input type="hidden" {...form.register('citizenId')} />
           
            <FormField
@@ -240,7 +231,10 @@ export default function ReportForm() {
             <FormMessage />
           </FormItem>
           
-          <SubmitButton />
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? 'Submitting...' : 'Submit Report'}
+          </Button>
         </form>
       </Form>
     </>
