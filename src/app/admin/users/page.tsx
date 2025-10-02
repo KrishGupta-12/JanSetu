@@ -83,10 +83,16 @@ export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'citizen')), [firestore]);
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('role', '==', 'citizen'))
+  }, [firestore]);
   const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(usersQuery);
 
-  const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+  const reportsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'issueReports'));
+  }, [firestore]);
   const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
   const citizenData: EnrichedCitizen[] = useMemo(() => {
@@ -107,7 +113,7 @@ export default function UsersPage() {
 
   const handleBan = (citizenId: string, duration: Duration | 'lifetime') => {
     const citizen = citizens?.find(c => c.uid === citizenId);
-    if (!citizen) return;
+    if (!citizen || !firestore) return;
 
     const bannedUntil = duration === 'lifetime' ? 'lifetime' : add(new Date(), duration).toISOString();
     
@@ -122,7 +128,7 @@ export default function UsersPage() {
 
   const handleUnban = (citizenId: string) => {
      const citizen = citizens?.find(c => c.uid === citizenId);
-    if (!citizen) return;
+    if (!citizen || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', citizenId);
     updateDocumentNonBlocking(userDocRef, { bannedUntil: null });

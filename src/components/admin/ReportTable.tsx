@@ -110,7 +110,10 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const adminsQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const adminsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'));
+  }, [firestore]);
   const { data: allAdmins } = useCollection<UserProfile>(adminsQuery);
 
 
@@ -126,6 +129,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   }, [reports, urgencyFilter, categoryFilter]);
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
+    if (!firestore) return;
     const reportDocRef = doc(firestore, 'issueReports', reportId);
     updateDocumentNonBlocking(reportDocRef, { status });
 
@@ -136,6 +140,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   }
   
   const handleUpdateUrgency = (reportId: string, urgency: ReportUrgency) => {
+    if (!firestore) return;
     const reportDocRef = doc(firestore, 'issueReports', reportId);
     updateDocumentNonBlocking(reportDocRef, { urgency });
     toast({
@@ -145,6 +150,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   }
 
   const handleAssignAdmin = (reportId: string, assignedAdmin: UserProfile) => {
+    if (!firestore) return;
     const reportDocRef = doc(firestore, 'issueReports', reportId);
      updateDocumentNonBlocking(reportDocRef, {
         assignedAdminId: assignedAdmin.uid,
@@ -202,6 +208,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   }
   
   const handleSaveResolution = (reportId: string, resolutionData: Omit<Resolution, 'adminId' | 'adminName' | 'date'>) => {
+    if (!firestore) return;
     const reportDocRef = doc(firestore, 'issueReports', reportId);
     const updateData = {
       status: ReportStatus.PendingCitizenFeedback,
@@ -218,6 +225,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   }
 
   const handleApproveWork = (reportId: string) => {
+    if (!firestore) return;
     const reportDocRef = doc(firestore, 'issueReports', reportId);
      updateDocumentNonBlocking(reportDocRef, { 
        status: ReportStatus.Resolved,

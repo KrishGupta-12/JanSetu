@@ -51,7 +51,10 @@ function AlertsSkeleton() {
 
 export default function AlertsPage() {
   const firestore = useFirestore();
-  const alertsQuery = useMemoFirebase(() => query(collection(firestore, 'alerts'), orderBy('publishDate', 'desc')), [firestore]);
+  const alertsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'alerts'), orderBy('publishDate', 'desc'));
+  }, [firestore]);
   const { data: alerts, isLoading } = useCollection<AlertType>(alertsQuery);
 
   return (

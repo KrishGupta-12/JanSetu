@@ -68,11 +68,14 @@ export default function AdminAlertsPage() {
   const [level, setLevel] = useState<AlertLevel>('Info');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const alertsQuery = useMemoFirebase(() => query(collection(firestore, 'alerts'), orderBy('publishDate', 'desc')), [firestore]);
+  const alertsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'alerts'), orderBy('publishDate', 'desc'));
+  }, [firestore]);
   const { data: alerts, isLoading: areAlertsLoading } = useCollection<AlertType>(alertsQuery);
 
   const handleSubmit = async () => {
-    if (!adminUser) return;
+    if (!adminUser || !firestore) return;
     if (!title || !description) {
       toast({
         variant: 'destructive',

@@ -30,7 +30,7 @@ export default function MyDepartmentPage() {
   const firestore = useFirestore();
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!adminData || !adminData.uid || !adminData.role || !isDepartmentAdmin(adminData.role)) return null;
+    if (!firestore || !adminData || !adminData.uid || !adminData.role || !isDepartmentAdmin(adminData.role)) return null;
     return query(collection(firestore, 'issueReports'), where('assignedAdminId', '==', adminData.uid));
   }, [adminData, firestore]);
 

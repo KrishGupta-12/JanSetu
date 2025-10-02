@@ -51,7 +51,7 @@ export default function MyReportsPage() {
     }, [user, isUserLoading, router]);
 
     const userReportsQuery = useMemoFirebase(
-        () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
+        () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
         [user, firestore]
     );
 
@@ -63,6 +63,7 @@ export default function MyReportsPage() {
     }
     
     const handleSaveFeedback = (reportId: string, rating: number, feedback: string) => {
+        if (!firestore) return;
         const reportDocRef = doc(firestore, 'issueReports', reportId);
         const updateData = {
             'resolution.citizenRating': rating,

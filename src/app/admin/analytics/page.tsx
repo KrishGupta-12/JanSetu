@@ -29,10 +29,16 @@ const categoryColors: {[key in ReportCategory]: string} = {
 export default function AnalyticsPage() {
     const firestore = useFirestore();
 
-    const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+    const reportsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'issueReports'));
+    }, [firestore]);
     const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles)), [firestore]);
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles));
+    }, [firestore]);
     const { data: departmentAdmins, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const reportsByStatus = useMemo(() => {

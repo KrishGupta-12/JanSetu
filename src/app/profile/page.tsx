@@ -50,7 +50,7 @@ export default function ProfilePage() {
   const firestore = useFirestore();
 
   const userReportsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
+    () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
     [user, firestore]
   );
   const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);

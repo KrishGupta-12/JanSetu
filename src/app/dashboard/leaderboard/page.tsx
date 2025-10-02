@@ -64,10 +64,16 @@ function LeaderboardSkeleton() {
 export default function LeaderboardPage() {
     const firestore = useFirestore();
 
-    const citizensQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'citizen')), [firestore]);
+    const citizensQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'users'), where('role', '==', 'citizen'));
+    }, [firestore]);
     const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
     
-    const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+    const reportsQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'issueReports'));
+    }, [firestore]);
     const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
     const leaderboardData = useMemo(() => {

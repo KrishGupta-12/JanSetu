@@ -60,14 +60,14 @@ export default function MyTeamPage() {
   }, [adminData, isUserLoading, router]);
 
   const teamQuery = useMemoFirebase(() => {
-    if (!adminData || !adminData.department) return null;
+    if (!firestore || !adminData || !adminData.department) return null;
     return query(collection(firestore, 'users'), where('department', '==', adminData.department));
   }, [adminData, firestore]);
 
   const { data: teamMembers, isLoading: teamLoading } = useCollection<UserProfile>(teamQuery);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!adminData || !adminData.department) return null;
+    if (!firestore || !adminData || !adminData.department) return null;
     return query(collection(firestore, 'issueReports'), where('category', '==', adminData.department));
   }, [adminData, firestore]);
   

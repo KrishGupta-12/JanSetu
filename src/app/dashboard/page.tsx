@@ -39,12 +39,15 @@ export default function DashboardPage() {
   const firestore = useFirestore();
 
   const userReportsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid), limit(2)) : null,
+    () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid), limit(2)) : null,
     [user, firestore]
   );
   const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
   
-  const allReportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+  const allReportsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'issueReports'));
+  }, [firestore]);
   const { data: allReports, isLoading: areAllReportsLoading } = useCollection<Report>(allReportsQuery);
 
 

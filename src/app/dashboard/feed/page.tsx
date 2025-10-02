@@ -55,10 +55,16 @@ export default function CommunityFeedPage() {
     const { user, isLoading: isUserLoading } = useAuth();
     const firestore = useFirestore();
 
-    const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports'), orderBy('reportDate', 'desc')), [firestore]);
+    const reportsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'issueReports'), orderBy('reportDate', 'desc'));
+    }, [firestore]);
     const { data: reports, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
 
-    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
     const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
 
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
@@ -73,7 +79,7 @@ export default function CommunityFeedPage() {
     }, [reports, users]);
 
     const handleUpvote = (reportId: string) => {
-        if (!user) return;
+        if (!user || !firestore) return;
         const reportRef = doc(firestore, 'issueReports', reportId);
         const report = reports?.find(r => r.id === reportId);
         
@@ -93,6 +99,7 @@ export default function CommunityFeedPage() {
     };
     
     const handleSaveFeedback = (reportId: string, rating: number, feedback: string) => {
+        if (!firestore) return;
         const reportDocRef = doc(firestore, 'issueReports', reportId);
         const updateData = {
             'resolution.citizenRating': rating,

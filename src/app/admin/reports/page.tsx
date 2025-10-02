@@ -21,7 +21,7 @@ export default function AdminReportsPage() {
   }, [adminData, isUserLoading, router]);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!adminData || adminData.role !== AdminRole.SuperAdmin) return null;
+    if (!firestore || !adminData || adminData.role !== AdminRole.SuperAdmin) return null;
     return query(collection(firestore, 'issueReports'));
   }, [adminData, firestore]);
 
