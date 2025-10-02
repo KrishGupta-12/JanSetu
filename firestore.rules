@@ -1,141 +1,155 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control system with user-specific data segregation.
+ * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
+ *
+ * Core Philosophy:
+ * This ruleset employs a role-based access control model, where user roles (citizen, waste_admin, pothole_admin, streetlight_admin, water_admin, super_admin) dictate access privileges.
+ * Super admins have unrestricted access, while other roles have varying levels of access to issue reports and alerts.
+ * User profiles are readable by anyone, but only updatable by the user themselves.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profiles, accessible to all for reading, but only writable by the user themselves.
- * - /issueReports/{reportId}: Stores issue reports. Readable by anyone, but writable only by super admins or with validation of citizen ownership.
- * - /superAdmins/{userId}: Documents indicating super admin status. Only super admins can create or modify these.
- * - /alerts/{alertId}: Stores platform alerts. Readable by anyone, writable only by super admins.
- * - /leaderboard/{leaderboardId}: Stores leaderboard data. Readable by anyone, writable only by super admins.
+ * - /users/{userId}: Stores user profile information, with {userId} matching the Firebase Auth UID.
+ * - /issueReports/{reportId}: Stores issue reports submitted by citizens.
+ * - /superAdmins/{userId}: Presence of a document with the user's UID grants super admin privileges.
+ * - /alerts/{alertId}: Stores platform-wide alerts.
+ * - /leaderboard/{leaderboardId}: Stores leaderboard data (single document).
  *
  * Key Security Decisions:
- * - User profiles are readable by everyone but only writable by the user themselves.
- * - Issue reports are publicly readable but writable with ownership validation and/or super admin privileges.
- * - Only super admins can manage super admin roles.
- * - Only super admins can create or modify platform alerts and leaderboard data.
- * - Listing of users and super admins is disallowed to prevent information disclosure.
+ * - Listing of users is disallowed to protect user privacy.
+ * - Leaderboard data is publicly readable but only writable by a super admin.
+ * - Super admin status is determined by the presence of a document in the `/superAdmins` collection.
+ * - Data shape validation is relaxed for prototyping, but authorization checks are strictly enforced.
  *
  * Denormalization for Authorization:
- * - The issue report includes `citizenId` to quickly check ownership for write operations.
+ * - Super admin status is checked by verifying the existence of a document in the `/superAdmins/{userId}` collection, eliminating the need to store redundant role information in the user profile.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows read access to user profiles and write access only to the owning user.
-     * @path /users/{userId}
-     * @allow (get, list) - Any user can read any profile.
-     * @allow (create, update, delete) - Only the user with matching UID can modify their own profile.
-     * @deny (create, update, delete) - Any user attempting to modify another user's profile.
-     * @principle Enforces document ownership for writes, allows public reads.
+     * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
      */
-    match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      allow get: if true;
-      allow list: if false;
-
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isOwner(userId) && resource != null;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
     /**
-     * @description Allows read access to issue reports for everyone. Writes are restricted to super admins or validated citizen ownership.
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     * @param {string} userId - The user ID to compare against the authenticated user's UID.
+     * @return {boolean} True if the UID matches, false otherwise.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user's UID matches the user ID of the existing document.
+     * @param {string} userId - The user ID to compare against the existing document's user ID.
+     * @return {boolean} True if the UID matches and the resource exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the user has super admin privileges by verifying the existence of a document in the `/superAdmins` collection.
+     * @return {boolean} True if the user is a super admin, false otherwise.
+     */
+    function isSuperAdmin() {
+      return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
+    }
+
+    /***************** User Profiles (/users/{userId}) *****************/
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (get) Authenticated users can read any profile.
+     * @allow (create) Users can create their own profile if the UID matches.
+     * @allow (update) Users can update their own profile.
+     * @allow (delete) Users cannot delete their profile through direct DB access (Auth only).
+     * @deny (list) Listing users is not allowed.
+     * @principle Enforces document ownership for writes; allows public reads.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+    }
+
+    /***************** Issue Reports (/issueReports/{reportId}) *****************/
+    /**
+     * @description Controls access to issue report documents.
      * @path /issueReports/{reportId}
-     * @allow (get, list) - Any user can read any issue report.
-     * @allow (create) - Any authenticated user can create a report with a matching citizenId.
-     * @allow (update, delete) - Only super admins can update/delete reports.
-     * @deny (create, update, delete) - Non-super admins attempting to modify or delete reports without proper ownership.
-     * @principle Allows public reads, enforces ownership or admin privileges for writes.
+     * @allow (get) Anyone can read an issue report.
+     * @allow (list) Anyone can list issue reports.
+     * @allow (create) Authenticated users can create issue reports.
+     * @allow (update) Only super admins can update issue reports.
+     * @allow (delete) Only super admins can delete issue reports.
+     * @principle Allows public reads; restricts writes to super admins.
      */
     match /issueReports/{reportId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isSuperAdmin() {
-        return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
-      }
-        
       allow get: if true;
       allow list: if true;
-
-      allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
+      allow create: if isSignedIn();
       allow update: if isSuperAdmin() && resource != null;
       allow delete: if isSuperAdmin() && resource != null;
     }
 
+    /***************** Super Admins (/superAdmins/{userId}) *****************/
     /**
-     * @description Manages super admin status. Only super admins can manage other super admins.
+     * @description Controls access to super admin documents.
      * @path /superAdmins/{userId}
-     * @allow (get) - Any authenticated user can check if a super admin exists
-     * @allow (create, update, delete) - Only existing super admins can grant or revoke super admin status.
-     * @deny (create, update, delete) - Non-super admins attempting to manage super admins.
-     * @principle Restricts super admin management to existing super admins.
+     * @allow (get) Only super admins can read super admin documents.
+     * @allow (list) Listing super admins is not allowed.
+     * @allow (create) Only super admins can create super admin documents.
+     * @allow (update) Only super admins can update super admin documents.
+     * @allow (delete) Only super admins can delete super admin documents.
+     * @principle Restricts access to super admin data to super admins only.
      */
     match /superAdmins/{userId} {
-        function isSignedIn() {
-          return request.auth != null;
-        }
-
-        function isSuperAdmin() {
-          return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
-        }
-
-        allow get: if isSignedIn();
-        allow list: if false;
-        
-        allow create: if isSuperAdmin();
-        allow update: if isSuperAdmin() && resource != null;
-        allow delete: if isSuperAdmin() && resource != null;
-    }
-
-    /**
-     * @description Allows read access to platform alerts for everyone. Only super admins can create, update or delete alerts.
-     * @path /alerts/{alertId}
-     * @allow (get, list) - Any user can read any alert.
-     * @allow (create, update, delete) - Only super admins can create, update, and delete alerts.
-     * @deny (create, update, delete) - Non-super admins attempting to manage alerts.
-     * @principle Allows public reads, restricts writes to super admins.
-     */
-    match /alerts/{alertId} {
-      function isSuperAdmin() {
-        return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
-      }
-        
-      allow get: if true;
-      allow list: if true;
-        
+      allow get: if isSuperAdmin();
+      allow list: if false;
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin() && resource != null;
       allow delete: if isSuperAdmin() && resource != null;
     }
 
+    /***************** Alerts (/alerts/{alertId}) *****************/
     /**
-     * @description Allows read access to leaderboard data for everyone. Only super admins can update the leaderboard.
-     * @path /leaderboard/{leaderboardId}
-     * @allow (get, list) - Any user can read the leaderboard data.
-     * @allow (create, update, delete) - Only super admins can create, update, and delete leaderboard data.
-     * @deny (create, update, delete) - Non-super admins attempting to manage the leaderboard.
-     * @principle Allows public reads, restricts writes to super admins.
+     * @description Controls access to alert documents.
+     * @path /alerts/{alertId}
+     * @allow (get) Anyone can read an alert.
+     * @allow (list) Anyone can list alerts.
+     * @allow (create) Only super admins can create alerts.
+     * @allow (update) Only super admins can update alerts.
+     * @allow (delete) Only super admins can delete alerts.
+     * @principle Allows public reads; restricts writes to super admins.
      */
-    match /leaderboard/{leaderboardId} {
-      function isSuperAdmin() {
-        return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
-      }
-        
+    match /alerts/{alertId} {
       allow get: if true;
       allow list: if true;
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() && resource != null;
+      allow delete: if isSuperAdmin() && resource != null;
+    }
 
+    /***************** Leaderboard (/leaderboard/{leaderboardId}) *****************/
+    /**
+     * @description Controls access to leaderboard documents.
+     * @path /leaderboard/{leaderboardId}
+     * @allow (get) Anyone can read the leaderboard.
+     * @allow (list) Listing leaderboards is not allowed (only single doc).
+     * @allow (create) Only super admins can create/replace the leaderboard.
+     * @allow (update) Only super admins can update the leaderboard.
+     * @allow (delete) Only super admins can delete the leaderboard.
+     * @principle Allows public reads; restricts writes to super admins.
+     */
+    match /leaderboard/{leaderboardId} {
+      allow get: if true;
+      allow list: if false;
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin() && resource != null;
       allow delete: if isSuperAdmin() && resource != null;
