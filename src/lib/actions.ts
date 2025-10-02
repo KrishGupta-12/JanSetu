@@ -40,9 +40,10 @@ export async function submitReport(
   }
 
   const { photo, description, citizenId, complainantName, complainantPhone, locationAddress, category } = validatedFields.data;
-  const { firestore } = await initializeAdminApp();
-
+  
   try {
+    const { firestore } = await initializeAdminApp();
+
     const reportData = {
       citizenId,
       complainantName,
