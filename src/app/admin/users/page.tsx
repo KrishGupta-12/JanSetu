@@ -77,18 +77,10 @@ function UserTableSkeleton() {
     )
 }
 
-function UserRow({ citizen, reports, onBan, onUnban, banDurations }: { citizen: UserProfile, reports: Report[], onBan: any, onUnban: any, banDurations: any[] }) {
-    const { isBanned, rejectedReports, isFlagged } = useMemo(() => {
-        const userReports = reports.filter(report => report.citizenId === citizen.uid);
-        const rejected = userReports.filter(report => report.status === ReportStatus.Rejected).length;
-        const flagged = rejected >= 5;
-        const banned = !!citizen.bannedUntil && (citizen.bannedUntil === 'lifetime' || new Date(citizen.bannedUntil) > new Date());
-        return { isBanned: banned, rejectedReports: rejected, isFlagged: flagged };
-    }, [citizen, reports]);
-
-
+function UserRow({ citizen, onBan, onUnban, banDurations }: { citizen: EnrichedCitizen, onBan: any, onUnban: any, banDurations: any[] }) {
+    
     return (
-        <TableRow className={isFlagged && !isBanned ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+        <TableRow className={citizen.isFlagged && !citizen.isBanned ? 'bg-red-50 dark:bg-red-900/20' : ''}>
             <TableCell>
                 <div className="flex items-center gap-3">
                     <Avatar>
@@ -97,12 +89,12 @@ function UserRow({ citizen, reports, onBan, onUnban, banDurations }: { citizen: 
                     </Avatar>
                     <div className="flex items-center gap-2">
                         <span className="font-medium">{citizen.name}</span>
-                        {isFlagged && (
+                        {citizen.isFlagged && (
                             <Badge variant="destructive" className="items-center gap-1">
                                 <ShieldAlert className="h-3 w-3" /> Flagged
                             </Badge>
                         )}
-                        {isBanned && (
+                        {citizen.isBanned && (
                             <Badge variant="destructive" className="items-center gap-1">
                                 <Ban className="h-3 w-3" /> Banned
                             </Badge>
@@ -116,7 +108,7 @@ function UserRow({ citizen, reports, onBan, onUnban, banDurations }: { citizen: 
             </TableCell>
             <TableCell>
                 {new Date(citizen.dateJoined).toLocaleDateString()}
-                {isBanned && (
+                {citizen.isBanned && (
                     <p className="text-xs text-destructive">
                         {citizen.bannedUntil === 'lifetime' ? 'Banned for life' : `Banned until ${new Date(citizen.bannedUntil!).toLocaleDateString()}`}
                     </p>
@@ -133,7 +125,7 @@ function UserRow({ citizen, reports, onBan, onUnban, banDurations }: { citizen: 
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Admin Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {isBanned ? (
+                        {citizen.isBanned ? (
                             <DropdownMenuItem onClick={() => onUnban(citizen.uid)}>
                                 <RotateCcw className="mr-2 h-4 w-4" />
                                 Unban User
@@ -180,6 +172,17 @@ export default function UsersPage() {
     return query(collection(firestore, 'issueReports'));
   }, [firestore, adminUser]);
   const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+
+  const enrichedCitizens = useMemo(() => {
+      if (!citizens || !reports) return [];
+      return citizens.map(citizen => {
+          const userReports = reports.filter(report => report.citizenId === citizen.uid);
+          const rejected = userReports.filter(report => report.status === ReportStatus.Rejected).length;
+          const flagged = rejected >= 5;
+          const banned = !!citizen.bannedUntil && (citizen.bannedUntil === 'lifetime' || new Date(citizen.bannedUntil) > new Date());
+          return { ...citizen, isBanned: banned, rejectedReports: rejected, isFlagged: flagged };
+      });
+  }, [citizens, reports]);
 
   const handleBan = (citizenId: string, duration: Duration | 'lifetime') => {
     if (!firestore) return;
@@ -253,11 +256,10 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {citizens?.map((citizen) => (
+                {enrichedCitizens?.map((citizen) => (
                   <UserRow
                     key={citizen.uid}
                     citizen={citizen}
-                    reports={reports || []}
                     onBan={handleBan}
                     onUnban={handleUnban}
                     banDurations={banDurations}
@@ -271,4 +273,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
