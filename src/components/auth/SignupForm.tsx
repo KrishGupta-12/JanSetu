@@ -5,11 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,11 +20,16 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '../ui/textarea';
 
@@ -38,9 +42,7 @@ const formSchema = z.object({
     message: 'Password must be at least 6 characters.',
   }),
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  dob: z.date({
-    required_error: 'A date of birth is required.',
-  }),
+  dob: z.string().min(1, { message: 'Date of birth is required.'}),
   address: z.string().min(5, { message: 'Please enter a valid address.' }),
   city: z.string().min(2, { message: 'Please enter a valid city.' }),
   state: z.string().min(2, { message: 'Please enter a valid state.' }),
@@ -54,6 +56,10 @@ export function SignupForm() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [dobDay, setDobDay] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobYear, setDobYear] = useState('');
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,8 +70,16 @@ export function SignupForm() {
       address: '',
       city: '',
       state: '',
+      dob: '',
     },
   });
+
+  useEffect(() => {
+    if (dobDay && dobMonth && dobYear) {
+      form.setValue('dob', `${dobYear}-${dobMonth}-${dobDay}`);
+      form.clearErrors('dob');
+    }
+  }, [dobDay, dobMonth, dobYear, form]);
   
   // Seed admin user on component mount if it doesn't exist
   useEffect(() => {
@@ -73,10 +87,6 @@ export function SignupForm() {
         if (!auth || !firestore) return;
         
         try {
-            // Check if admin already exists
-            const adminDocRef = doc(firestore, "admins", "admin_user_id_placeholder"); // A placeholder to check, can be any known admin id if available
-            const adminDoc = await getDoc(adminDocRef);
-
             // A more reliable way is to check if admin@jancorp.com exists.
             // This requires a function to get user by email, which is an admin-only SDK feature.
             // For client-side, we try to sign-in and if it fails with user-not-found, we create it.
@@ -127,7 +137,9 @@ export function SignupForm() {
         }
     };
 
-    seedAdmin();
+    if (auth && firestore) {
+      seedAdmin();
+    }
   }, [auth, firestore]);
 
   useEffect(() => {
@@ -148,7 +160,7 @@ export function SignupForm() {
         name: values.name,
         email: values.email,
         phone: values.phone,
-        dob: format(values.dob, 'yyyy-MM-dd'),
+        dob: values.dob,
         address: values.address,
         city: values.city,
         state: values.state,
@@ -179,6 +191,24 @@ export function SignupForm() {
       setIsLoading(false);
     }
   };
+
+  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+  const months = [
+      { value: '01', label: 'January' },
+      { value: '02', label: 'February' },
+      { value: '03', label: 'March' },
+      { value: '04', label: 'April' },
+      { value: '05', label: 'May' },
+      { value: '06', label: 'June' },
+      { value: '07', label: 'July' },
+      { value: '08', label: 'August' },
+      { value: '09', label: 'September' },
+      { value: '10', label: 'October' },
+      { value: '11', label: 'November' },
+      { value: '12', label: 'December' },
+    ];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 100 }, (_, i) => (currentYear - i).toString());
 
   return (
     <Form {...form}>
@@ -238,42 +268,37 @@ export function SignupForm() {
         <FormField
           control={form.control}
           name="dob"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Date of Birth</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-full pl-3 text-left font-normal',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, 'PPP')
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date('1900-01-01')
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
+          render={() => (
+             <FormItem>
+                <FormLabel>Date of Birth</FormLabel>
+                <div className="grid grid-cols-3 gap-2">
+                    <Select onValueChange={setDobDay} value={dobDay}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                     <Select onValueChange={setDobMonth} value={dobMonth}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {months.map(month => <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                     <Select onValueChange={setDobYear} value={dobYear}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                             {years.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <FormMessage />
+             </FormItem>
           )}
         />
         <FormField
