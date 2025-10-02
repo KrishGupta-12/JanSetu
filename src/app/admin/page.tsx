@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+import MapProvider from '@/components/home/MapProvider';
+import MapView from '@/components/home/MapView';
 
 export default function AdminDashboardPage() {
   const { user: adminData, isLoading: isUserLoading } = useAuth();
@@ -173,19 +175,35 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
       
-       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
-            Recent Reports
-          </CardTitle>
-            <Button asChild variant="secondary" size="sm">
-                <Link href="/admin/reports">View All Reports</Link>
-            </Button>
-        </CardHeader>
-        <CardContent>
-          <ReportTable reports={reports?.slice(0, 5) || []} admin={adminData} />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>
+                Recent Reports
+              </CardTitle>
+                <Button asChild variant="secondary" size="sm">
+                    <Link href="/admin/reports">View All Reports</Link>
+                </Button>
+            </CardHeader>
+            <CardContent>
+              <ReportTable reports={reports?.slice(0, 5) || []} admin={adminData} />
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-1">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Live Issues Map</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[400px]">
+              <MapProvider>
+                <MapView reports={reports || []} />
+              </MapProvider>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

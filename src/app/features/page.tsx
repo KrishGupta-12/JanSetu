@@ -3,13 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Logo from '@/components/common/Logo';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BarChart, Bell, Shield, Users, Sparkles, ThumbsUp, Award } from 'lucide-react';
+import { ArrowRight, BarChart, Bell, Shield, Users, Sparkles, ThumbsUp, Award, MapPin } from 'lucide-react';
 
 const features = [
   {
     icon: <Sparkles className="h-10 w-10 text-primary" />,
     title: 'AI-Powered Classification',
     description: 'Our Genkit-powered AI automatically analyzes report descriptions to assign a relevant category and urgency level, streamlining the dispatch process.',
+  },
+  {
+    icon: <MapPin className="h-10 w-10 text-primary" />,
+    title: 'Geo-tagged Issue Reporting',
+    description: 'Accurately tag the location of an issue using your device\'s GPS, providing administrators with the exact coordinates for swift action.',
   },
   {
     icon: <ThumbsUp className="h-10 w-10 text-primary" />,
