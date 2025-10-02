@@ -15,11 +15,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MoreHorizontal, Ban, RotateCcw, Search, UserX, ShieldX, Files, ListChecks, Hourglass } from 'lucide-react';
+import { Ban, Search, UserX, ShieldX, Files, ListChecks, Hourglass } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -205,7 +204,7 @@ export default function UsersPage() {
                      <TableCell>
                         {user.isBanned ? (
                            <Badge variant="destructive" className="items-center gap-1">
-                                <Ban className="h-3 w-3" /> Banned
+                                <UserX className="h-3 w-3" /> Banned
                             </Badge>
                         ) : (
                            <Badge variant="secondary" className="text-green-600 border-green-300">Active</Badge>

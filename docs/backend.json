@@ -83,15 +83,14 @@
       },
       "required": ["lastUpdated", "users"]
     },
-    "AdminCredential": {
-        "title": "Admin Credential",
+    "SuperAdmin": {
+        "title": "Super Admin",
         "type": "object",
-        "description": "Defines an authorized administrator's role and department, keyed by their email.",
+        "description": "A document indicating that the user is a super admin. The document ID should be the user's UID.",
         "properties": {
-            "role": { "type": "string", "enum": ["super_admin", "waste_admin", "pothole_admin", "streetlight_admin", "water_admin"], "description": "The administrative role assigned to the user." },
-            "department": { "type": "string", "enum": ["Waste Management", "Potholes", "Streetlight Outage", "Water Logging", "Other"], "description": "The specific department the admin belongs to." }
+            "isAdmin": { "type": "boolean", "const": true }
         },
-        "required": ["role"]
+        "required": ["isAdmin"]
     },
     "Alert": {
       "title": "Platform Alert",
@@ -117,9 +116,9 @@
       "schema": { "$ref": "#/entities/IssueReport" },
       "description": "Stores all issue reports submitted by citizens."
     },
-    "'/admins/{email}'": {
-      "schema": { "$ref": "#/entities/AdminCredential" },
-      "description": "A list of authorized administrators, keyed by email, defining their roles and departments."
+    "'/superAdmins/{userId}'": {
+      "schema": { "$ref": "#/entities/SuperAdmin" },
+      "description": "A list of super administrators, keyed by their UID. The existence of a document here grants super admin privileges."
     },
     "'/alerts/{alertId}'": {
       "schema": { "$ref": "#/entities/Alert" },
