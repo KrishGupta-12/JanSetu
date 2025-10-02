@@ -1,134 +1,143 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model with super-admin overrides.
+ * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
+ *
+ * Core Philosophy:
+ * This ruleset implements a role-based access control system with user-owned profiles and public issue reports.
+ * Super admins have elevated privileges, while regular users (citizens and department admins) have restricted access.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles, accessible only to the user themselves and super admins.
- * - /issueReports/{reportId}: Stores issue reports, publicly readable but writable only with a valid citizenId.
- * - /superAdmins/{userId}: Indicates super admin status; document ID must match the user's UID.
+ * - /users/{userId}: Stores user profiles, accessible to the owner and super admins.
+ * - /issueReports/{reportId}: Stores issue reports, publicly readable but writable only with validated ownership.
+ * - /superAdmins/{userId}: Documents indicating super admin status; used for role-based checks.
  * - /alerts/{alertId}: Stores platform alerts, publicly readable but writable only by super admins.
- * - /leaderboard/{leaderboardId}: Stores leaderboard data, publicly readable, but writable only by super admins.
+ * - /leaderboard/{leaderboardId}: Stores leaderboard data, publicly readable but writable only by super admins.
  *
  * Key Security Decisions:
- * - Users can only read and write their own profile data under /users/{userId}.
- * - Super admins have full read and write access to all data.
- * - Issue reports are publicly readable but writable only with a valid citizenId.
- * - Leaderboard data is publicly readable but writable only by super admins.
- * - The existence of a document in /superAdmins/{userId} grants super admin privileges.
- * - Listing of users is denied to prevent unauthorized data scraping.
+ * - Listing all users is disallowed for regular users but allowed for super admins.
+ * - Issue reports are publicly readable to encourage transparency and community engagement.
+ * - Super admin status is determined by the presence of a document in the `/superAdmins` collection.
  *
  * Denormalization for Authorization:
- * - Super admin status is checked via document existence in the /superAdmins collection.
+ * - Issue reports include a `citizenId` field to simplify ownership checks.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the user is signed in.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     * @param {string} userId - The user ID to compare against.
-     * @return {bool} - True if the UIDs match, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is a super admin by verifying the existence of a document in the /superAdmins collection with the UID as the document ID.
-     * @return {bool} - True if the user is a super admin, false otherwise.
-     */
-    function isSuperAdmin() {
-      return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
-    }
-
-    /**
-     * @description Checks if the user is the owner and the resource exists (for update and delete operations).
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Rules for the /users/{userId} collection.
+     * @description Controls access to user profiles.
      * @path /users/{userId}
-     * @allow (read) User 'user123' can read their own profile.
-     *     Request: { auth: { uid: 'user123' }, method: 'get', path: '/databases/(default)/documents/users/user123' }
-     * @allow (create) User 'user123' can create their own profile.
-     *     Request: { auth: { uid: 'user123' }, method: 'create', path: '/databases/(default)/documents/users/user123', data: { uid: 'user123' } }
-     * @deny (read) User 'user456' cannot read 'user123's profile.
-     *     Request: { auth: { uid: 'user456' }, method: 'get', path: '/databases/(default)/documents/users/user123' }
-     * @deny (create) User 'user456' cannot create a profile with 'user123's ID.
-     *     Request: { auth: { uid: 'user456' }, method: 'create', path: '/databases/(default)/documents/users/user123', data: { uid: 'user123' } }
-     * @principle Enforces document ownership for reads and writes.  Users can only access their own profile.
+     * @allow (get) Authenticated user can read their own profile, or a super admin can read any profile.
+     *   Example: `auth.uid` is "user123" and requesting `/users/user123` or `auth.uid` is "admin456" and requesting `/users/user123`.
+     * @allow (list) Only super admins can list all users.
+     *   Example: `auth.uid` is "admin456" listing `/users`.
+     * @allow (create) Authenticated user can create their own profile. The `uid` field in the document must match the `userId` in the path.
+     *   Example: `auth.uid` is "user123" creating `/users/user123` with `request.resource.data.uid` set to "user123".
+     * @allow (update) Authenticated user can update their own profile, or a super admin can update any profile. The `uid` field in the document must remain unchanged.
+     *   Example: `auth.uid` is "user123" updating `/users/user123` or `auth.uid` is "admin456" updating `/users/user123`.
+     * @allow (delete) Authenticated user can delete their own profile, or a super admin can delete any profile.
+     *   Example: `auth.uid` is "user123" deleting `/users/user123` or `auth.uid` is "admin456" deleting `/users/user123`.
+     * @deny (get) Authenticated user tries to read another user's profile and is not a super admin.
+     *   Example: `auth.uid` is "user123" requesting `/users/user456`.
+     * @deny (create) Authenticated user tries to create a profile for another user, or the `uid` field in the document does not match the `userId` in the path.
+     *   Example: `auth.uid` is "user123" creating `/users/user456` or creating `/users/user123` with `request.resource.data.uid` set to "user456".
+     * @deny (update) Authenticated user tries to update another user's profile and is not a super admin, or the `uid` field in the document is changed.
+     *   Example: `auth.uid` is "user123" updating `/users/user456` or updating `/users/user123` and changing `request.resource.data.uid`.
+     * @deny (delete) Authenticated user tries to delete another user's profile and is not a super admin.
+     *   Example: `auth.uid` is "user123" deleting `/users/user456`.
+     * @principle Enforces user-ownership for profile management and allows super admins full access.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isSuperAdmin();
-      allow list: if false; // Prevent listing all users
-
+      allow list: if isSuperAdmin(); // FIX: allow super admins to list users
       allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid || isSuperAdmin();
+      allow update: if (isExistingOwner(userId) && request.resource.data.uid == resource.data.uid) || isSuperAdmin();
       allow delete: if isExistingOwner(userId) || isSuperAdmin();
     }
 
     /**
-     * @description Rules for the /issueReports/{reportId} collection.
+     * @description Controls access to issue reports. Issue reports are publicly readable.
+     *              Only the report's author can modify or delete it.
      * @path /issueReports/{reportId}
-     * @allow (read) Any user can read any issue report.
-     *     Request: { auth: { uid: 'user123' }, method: 'get', path: '/databases/(default)/documents/issueReports/report123' }
-     * @allow (create) User 'user123' can create a report with their citizenId.
-     *     Request: { auth: { uid: 'user123' }, method: 'create', path: '/databases/(default)/documents/issueReports/report123', data: { citizenId: 'user123' } }
-     * @deny (create) User 'user456' cannot create a report with 'user123's citizenId.
-     *     Request: { auth: { uid: 'user456' }, method: 'create', path: '/databases/(default)/documents/issueReports/report123', data: { citizenId: 'user123' } }
-     * @deny (update) User 'user123' cannot update a report they did not create without being super admin
-     *     Request: { auth: { uid: 'user123' }, method: 'update', path: '/databases/(default)/documents/issueReports/report123', data: { citizenId: 'user456' } }
-     * @principle Allows public reads, but restricts writes to the report's author or super admins.  Validates citizenId on creation.
+     * @allow (get) Any user can read any issue report.
+     *   Example: Any `auth.uid` requesting `/issueReports/report123`.
+     * @allow (list) Any user can list issue reports.
+     *   Example: Any `auth.uid` listing `/issueReports`.
+     * @allow (create) Authenticated user can create an issue report. The `citizenId` field must match the user's `uid`.
+     *   Example: `auth.uid` is "user123" creating `/issueReports/report456` with `request.resource.data.citizenId` set to "user123".
+     * @allow (update) Authenticated user can update their own issue report, and the `citizenId` cannot be changed.
+     *   Example: `auth.uid` is "user123" updating `/issueReports/report456` where the existing `citizenId` is "user123".
+     * @allow (delete) Authenticated user can delete their own issue report.
+     *   Example: `auth.uid` is "user123" deleting `/issueReports/report456` where the existing `citizenId` is "user123".
+     * @deny (create) Authenticated user tries to create an issue report for another user.
+     *   Example: `auth.uid` is "user123" creating `/issueReports/report456` with `request.resource.data.citizenId` set to "user456".
+     * @deny (update) Authenticated user tries to update another user's issue report, or the `citizenId` is changed.
+     *   Example: `auth.uid` is "user123" updating `/issueReports/report456` where the existing `citizenId` is not "user123" or the update attempts to change the `citizenId`.
+     * @deny (delete) Authenticated user tries to delete another user's issue report.
+     *   Example: `auth.uid` is "user123" deleting `/issueReports/report456` where the existing `citizenId` is not "user123".
+     * @principle Public read access with owner-only writes.
      */
     match /issueReports/{reportId} {
       allow get, list: if true;
       allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.citizenId == request.auth.uid || isSuperAdmin();
-      allow delete: if isSignedIn() && resource.data.citizenId == request.auth.uid || isSuperAdmin();
+      allow update: if isExistingOwner(resource.data.citizenId) && request.resource.data.citizenId == resource.data.citizenId;
+      allow delete: if isExistingOwner(resource.data.citizenId);
     }
 
     /**
-     * @description Rules for the /superAdmins/{userId} collection.
+     * @description Manages super admin privileges. Only super admins (identified by their presence in this collection)
+     *              can manage other super admins.
      * @path /superAdmins/{userId}
-     * @allow (read) Any super admin can read the document.
-     *     Request: { auth: { uid: 'superAdmin1' }, method: 'get', path: '/databases/(default)/documents/superAdmins/superAdmin1' }
-     * @allow (create) Only a super admin can create a document.
-     *     Request: { auth: { uid: 'superAdmin1' }, method: 'create', path: '/databases/(default)/documents/superAdmins/superAdmin2', data: { isAdmin: true } }
-     * @deny (read) A regular user cannot read the document.
-     *     Request: { auth: { uid: 'user123' }, method: 'get', path: '/databases/(default)/documents/superAdmins/superAdmin1' }
-     * @deny (create) A regular user cannot create a document.
-     *     Request: { auth: { uid: 'user123' }, method: 'create', path: '/databases/(default)/documents/superAdmins/superAdmin1', data: { isAdmin: true } }
-     * @principle Only super admins can create or manage super admin accounts.
+     * @allow (get) Only a super admin can check if another user is a super admin.
+     *   Example: `auth.uid` is "admin123" and requesting `/superAdmins/user456`.
+     * @allow (list) No one can list the super admins.
+     *   Example: Any `auth.uid` trying to list `/superAdmins`.
+     * @allow (create) Only an existing super admin can grant super admin privileges to another user by creating a document with the user's UID.
+     *   Example: `auth.uid` is "admin123" creating `/superAdmins/user456`.
+     * @allow (update) Only an existing super admin can modify another super admin's document.
+     *   Example: `auth.uid` is "admin123" updating `/superAdmins/user456`.
+     * @allow (delete) Only an existing super admin can revoke super admin privileges from another user by deleting the document with the user's UID.
+     *   Example: `auth.uid` is "admin123" deleting `/superAdmins/user456`.
+     * @deny (get) Regular users cannot check if another user is a super admin.
+     *   Example: `auth.uid` is "user123" requesting `/superAdmins/user456`.
+     * @deny (list) Listing of super admins is not allowed.
+     *   Example: Any `auth.uid` listing `/superAdmins`.
+     * @deny (create) Regular users cannot grant super admin privileges.
+     *   Example: `auth.uid` is "user123" creating `/superAdmins/user456`.
+     * @deny (update) Regular users cannot modify super admin documents.
+     *   Example: `auth.uid` is "user123" updating `/superAdmins/user456`.
+     * @deny (delete) Regular users cannot revoke super admin privileges.
+     *   Example: `auth.uid` is "user123" deleting `/superAdmins/user456`.
+     * @principle Restricts super admin management to existing super admins.
      */
     match /superAdmins/{userId} {
-        allow get: if isSuperAdmin();
-        allow list: if false; // Super admins not listable
-
-        allow create: if isSuperAdmin() && request.resource.data.isAdmin == true;
-        allow update: if isSuperAdmin() && request.resource.data.isAdmin == true;
-        allow delete: if isSuperAdmin();
+      allow get: if isSuperAdmin();
+      allow list: if false;
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     /**
-     * @description Rules for the /alerts/{alertId} collection.
+     * @description Controls access to platform-wide alerts. Alerts are publicly readable but only manageable by super admins.
      * @path /alerts/{alertId}
-     * @allow (read) Any user can read any alert.
-     *     Request: { auth: { uid: 'user123' }, method: 'get', path: '/databases/(default)/documents/alerts/alert123' }
-     * @allow (create) Only a super admin can create an alert.
-     *     Request: { auth: { uid: 'superAdmin1' }, method: 'create', path: '/databases/(default)/documents/alerts/alert123', data: { title: 'Important Alert', description: '...', level: 'Critical', publishDate: '...', adminId: 'superAdmin1', adminName: 'Super Admin 1' } }
-     * @deny (create) A regular user cannot create an alert.
-     *     Request: { auth: { uid: 'user123' }, method: 'create', path: '/databases/(default)/documents/alerts/alert123', data: { title: 'Fake Alert', description: '...', level: 'Critical', publishDate: '...', adminId: 'user123', adminName: 'User 123' } }
-     * @principle Allows public reads, but restricts writes to super admins.
+     * @allow (get) Any user can read any alert.
+     *   Example: Any `auth.uid` requesting `/alerts/alert123`.
+     * @allow (list) Any user can list alerts.
+     *   Example: Any `auth.uid` listing `/alerts`.
+     * @allow (create) Only super admins can create alerts.
+     *   Example: `auth.uid` is "admin123" creating `/alerts/alert456`.
+     * @allow (update) Only super admins can update alerts.
+     *   Example: `auth.uid` is "admin123" updating `/alerts/alert456`.
+     * @allow (delete) Only super admins can delete alerts.
+     *   Example: `auth.uid` is "admin123" deleting `/alerts/alert456`.
+     * @deny (create) Regular users cannot create alerts.
+     *   Example: `auth.uid` is "user123" creating `/alerts/alert456`.
+     * @deny (update) Regular users cannot update alerts.
+     *   Example: `auth.uid` is "user123" updating `/alerts/alert456`.
+     * @deny (delete) Regular users cannot delete alerts.
+     *   Example: `auth.uid` is "user123" deleting `/alerts/alert456`.
+     * @principle Public read access with super admin-only writes.
      */
     match /alerts/{alertId} {
       allow get, list: if true;
@@ -138,21 +147,47 @@ service cloud.firestore {
     }
 
     /**
-     * @description Rules for the /leaderboard/{leaderboardId} collection.
+     * @description Controls access to the leaderboard data. The leaderboard is publicly readable but only updatable by super admins.
      * @path /leaderboard/{leaderboardId}
-     * @allow (read) Any user can read the leaderboard data.
-     *     Request: { auth: { uid: 'user123' }, method: 'get', path: '/databases/(default)/documents/leaderboard/leaderboard1' }
-     * @allow (create) Only a super admin can create leaderboard data.
-     *     Request: { auth: { uid: 'superAdmin1' }, method: 'create', path: '/databases/(default)/documents/leaderboard/leaderboard1', data: { lastUpdated: '...', users: [...] } }
-     * @deny (create) A regular user cannot create leaderboard data.
-     *     Request: { auth: { uid: 'user123' }, method: 'create', path: '/databases/(default)/documents/leaderboard/leaderboard1', data: { lastUpdated: '...', users: [...] } }
-     * @principle Allows public reads, but restricts writes to super admins.
+     * @allow (get) Any user can read the leaderboard.
+     *   Example: Any `auth.uid` requesting `/leaderboard/leaderboard1`.
+     * @allow (list) Any user can list the leaderboard.
+     *   Example: Any `auth.uid` listing `/leaderboard`.
+     * @allow (create) Only super admins can create a leaderboard.
+     *   Example: `auth.uid` is "admin123" creating `/leaderboard/leaderboard1`.
+     * @allow (update) Only super admins can update the leaderboard.
+     *   Example: `auth.uid` is "admin123" updating `/leaderboard/leaderboard1`.
+     * @allow (delete) Only super admins can delete the leaderboard.
+     *   Example: `auth.uid` is "admin123" deleting `/leaderboard/leaderboard1`.
+     * @deny (create) Regular users cannot create a leaderboard.
+     *   Example: `auth.uid` is "user123" creating `/leaderboard/leaderboard1`.
+     * @deny (update) Regular users cannot update the leaderboard.
+     *   Example: `auth.uid` is "user123" updating `/leaderboard/leaderboard1`.
+     * @deny (delete) Regular users cannot delete the leaderboard.
+     *   Example: `auth.uid` is "user123" deleting `/leaderboard/leaderboard1`.
+     * @principle Public read access with super admin-only writes.
      */
     match /leaderboard/{leaderboardId} {
       allow get, list: if true;
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin();
       allow delete: if isSuperAdmin();
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    function isSuperAdmin() {
+      return exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
     }
   }
 }
