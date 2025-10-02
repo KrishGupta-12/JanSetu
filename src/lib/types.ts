@@ -65,10 +65,9 @@ export type UserProfile = {
   uid: string;
   name: string;
   email: string;
-  phone?: string;
+  phone: string;
   dateJoined: string; 
-  dob?: string; 
-  address?: string;
+  address: string;
   city?: string;
   state?: string;
   bannedUntil?: string | 'lifetime' | null; 

@@ -20,9 +20,8 @@ type SignupData = {
     name: string;
     email: string;
     password: string;
-    phone?: string;
-    dob?: string;
-    address?: string;
+    phone: string;
+    address: string;
 }
 
 interface AuthContextType {
@@ -125,7 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
         // If user not found, try to sign them up as it could be a first-time demo user
-         return signup({name: email.split('@')[0], email, password});
+         return signup({name: email.split('@')[0], email, password, phone: '', address: ''});
       }
       return { success: false, message: error.message || 'Invalid email or password.' };
     }

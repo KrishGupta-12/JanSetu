@@ -143,7 +143,6 @@ export default function ProfilePage() {
                     <CardContent className="space-y-6">
                         <InfoRow icon={<Mail className="h-4 w-4 text-muted-foreground" />} label="Email" value={user.email} />
                         <InfoRow icon={<Phone className="h-4 w-4 text-muted-foreground" />} label="Phone" value={user.phone} />
-                        <InfoRow icon={<Calendar className="h-4 w-4 text-muted-foreground" />} label="Date of Birth" value={user.dob} />
                         <InfoRow icon={<Home className="h-4 w-4 text-muted-foreground" />} label="Address" value={user.address} />
                     </CardContent>
                 </Card>

@@ -30,9 +30,8 @@ const formSchema = z.object({
   password: z.string().min(6, {
     message: 'Password must be at least 6 characters.',
   }),
-  phone: z.string().optional(),
-  dob: z.string().optional(),
-  address: z.string().optional(),
+  phone: z.string().min(1, { message: 'Phone number is required.' }),
+  address: z.string().min(1, { message: 'Address is required.' }),
 });
 
 export function SignupForm() {
@@ -48,7 +47,6 @@ export function SignupForm() {
       email: '',
       password: '',
       phone: '',
-      dob: '',
       address: '',
     },
   });
@@ -122,22 +120,9 @@ export function SignupForm() {
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone Number (Optional)</FormLabel>
+              <FormLabel>Phone Number</FormLabel>
               <FormControl>
                 <Input placeholder="Your phone number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="dob"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Date of Birth (Optional)</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -148,7 +133,7 @@ export function SignupForm() {
           name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Address (Optional)</FormLabel>
+              <FormLabel>Address</FormLabel>
               <FormControl>
                 <Textarea placeholder="Your full address" {...field} />
               </FormControl>
