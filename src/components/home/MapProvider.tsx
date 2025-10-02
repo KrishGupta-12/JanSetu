@@ -1,11 +1,24 @@
 'use client';
 import { APIProvider } from '@vis.gl/react-google-maps';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { TriangleAlert } from 'lucide-react';
+import { Skeleton } from '../ui/skeleton';
 
 export default function MapProvider({ children }: { children: ReactNode }) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const [apiKey, setApiKey] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Access environment variable only on the client side
+    setApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    // While checking for the key, show a skeleton loader
+    return <Skeleton className="w-full h-full" />;
+  }
 
   if (!apiKey) {
     return (
