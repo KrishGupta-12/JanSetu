@@ -46,7 +46,7 @@ export default function UsersPage() {
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || adminUser?.role !== UserRole.SuperAdmin) return null;
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore, adminUser]);
 
