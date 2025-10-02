@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, UserCircle, LogOut, Files, Megaphone, Trophy, FilePlus } from 'lucide-react';
+import { LayoutDashboard, UserCircle, LogOut, Files, Megaphone, Trophy, FilePlus, Bell } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -19,10 +19,11 @@ import { Skeleton } from '../ui/skeleton';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/my-reports', label: 'My Reports', icon: Files },
   { href: '/report', label: 'New Report', icon: FilePlus },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/dashboard/my-reports', label: 'My Reports', icon: Files },
   { href: '/dashboard/feed', label: 'Community Feed', icon: Megaphone },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/dashboard/alerts', label: 'Alerts', icon: Bell },
 ];
 
 function SidebarSkeleton() {

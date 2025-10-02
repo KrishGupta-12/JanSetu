@@ -95,3 +95,15 @@ export type Admin = UserProfile & {
 export type Citizen = UserProfile & {
     role: null;
 }
+
+export type AlertLevel = 'Info' | 'Warning' | 'Critical';
+
+export type Alert = {
+  id: string;
+  title: string;
+  description: string;
+  level: AlertLevel;
+  publishDate: string;
+  adminId: string;
+  adminName: string;
+};

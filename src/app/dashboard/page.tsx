@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import AqiCard from '@/components/home/AqiCard';
-import DisasterAlert from '@/components/home/DisasterAlert';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
@@ -146,7 +145,6 @@ export default function DashboardPage() {
             )}
         </CardContent>
       </Card>
-      <DisasterAlert />
       </div>
     </div>
   );

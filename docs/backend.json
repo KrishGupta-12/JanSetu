@@ -65,6 +65,20 @@
             "department": { "type": "string", "enum": ["Waste Management", "Potholes", "Streetlight Outage", "Water Logging", "Other"], "description": "The specific department the admin belongs to." }
         },
         "required": ["role"]
+    },
+    "Alert": {
+      "title": "Platform Alert",
+      "type": "object",
+      "description": "Represents a platform-wide alert sent by an administrator.",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the alert." },
+        "description": { "type": "string", "description": "The detailed message of the alert." },
+        "level": { "type": "string", "enum": ["Info", "Warning", "Critical"], "description": "The severity level of the alert." },
+        "publishDate": { "type": "string", "format": "date-time", "description": "The date and time the alert was published." },
+        "adminId": { "type": "string", "description": "The UID of the admin who published the alert." },
+        "adminName": { "type": "string", "description": "The name of the admin who published the alert." }
+      },
+      "required": ["title", "description", "level", "publishDate", "adminId", "adminName"]
     }
   },
   "firestore": {
@@ -79,6 +93,10 @@
     "'/admins/{email}'": {
       "schema": { "$ref": "#/entities/AdminCredential" },
       "description": "A list of authorized administrators, keyed by email, defining their roles and departments."
+    },
+    "'/alerts/{alertId}'": {
+      "schema": { "$ref": "#/entities/Alert" },
+      "description": "Stores all platform-wide alerts published by administrators."
     }
   },
   "auth": {

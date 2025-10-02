@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, UserCog, Files } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, UserCog, Files, Megaphone } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,7 @@ const allMenuItems = [
   { href: '/admin/my-team', label: 'My Team', icon: UserCog, roles: [AdminRole.DepartmentAdmin] },
   { href: '/admin/users', label: 'Users', icon: Users, roles: [AdminRole.SuperAdmin] },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart, roles: [AdminRole.SuperAdmin] },
+  { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [AdminRole.SuperAdmin, AdminRole.DepartmentAdmin] },
 ];
 
 function SidebarSkeleton() {
