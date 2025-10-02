@@ -55,18 +55,21 @@ export default function ProfilePage() {
   const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
 
   const userStats = useMemo(() => {
-    if (!user) return { total: 0, resolved: 0, inProgress: 0, rejected: 0, score: 0 };
-    const score = (user.resolvedReports || 0) * 5 + (user.totalReports || 0);
-    const rejected = (userReports || []).filter(r => r.status === ReportStatus.Rejected).length;
-    const inProgress = (userReports || []).filter(r => r.status === ReportStatus.InProgress).length;
+    const reports = userReports || [];
+    const total = reports.length;
+    const resolved = reports.filter(r => r.status === ReportStatus.Resolved).length;
+    const inProgress = reports.filter(r => r.status === ReportStatus.InProgress).length;
+    const rejected = reports.filter(r => r.status === ReportStatus.Rejected).length;
+    const score = resolved * 5 + total;
+    
     return {
-        total: user.totalReports,
-        resolved: user.resolvedReports,
-        inProgress: inProgress,
-        rejected: rejected,
+        total,
+        resolved,
+        inProgress,
+        rejected,
         score,
     }
-  }, [user, userReports]);
+  }, [userReports]);
   
   const contribution = getContributionLevel(userStats.score);
 
