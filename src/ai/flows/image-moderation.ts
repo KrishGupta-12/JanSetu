@@ -14,7 +14,7 @@ const ModerateImageInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
-      'A photo to moderate, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' // Corrected typo here
+      'A photo to moderate, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     ),
 });
 export type ModerateImageInput = z.infer<typeof ModerateImageInputSchema>;
@@ -47,7 +47,12 @@ const moderateImageFilterFlow = ai.defineFlow(
     outputSchema: ModerateImageOutputSchema,
   },
   async input => {
-    const {output} = await moderateImageFilterPrompt(input);
-    return output!;
+    try {
+        const {output} = await moderateImageFilterPrompt(input);
+        return output!;
+    } catch(e) {
+        console.error("Image moderation failed, returning original image", e);
+        return { moderatedPhotoDataUri: input.photoDataUri };
+    }
   }
 );

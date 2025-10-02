@@ -3,7 +3,6 @@
 
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
-import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { classifyReport } from '@/ai/flows/classify-report';
 import { ReportCategory } from './types';
 import { initializeAdminApp } from '@/firebase/server-init';
@@ -85,35 +84,5 @@ export async function submitReport(
       status: 'error',
       message: 'There was an error submitting your report. Please try again.',
     };
-  }
-}
-
-export async function summarizeAllReports(): Promise<{ summary: string } | { error: string }> {
-  try {
-    const { firestore } = await initializeAdminApp();
-    const reportsCollection = collection(firestore, 'issueReports');
-    const q = query(reportsCollection);
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      return { summary: "No reports to summarize at the moment." };
-    }
-
-    const reportsForSummary = querySnapshot.docs.map(doc => {
-      const data = doc.data() as Report;
-      return {
-        category: data.category,
-        description: data.description,
-        location: data.locationAddress,
-      };
-    });
-    
-    const result = await summarizeReports({ reports: reportsForSummary });
-    
-    return { summary: result.summary };
-
-  } catch (error) {
-    console.error('Error generating summary:', error);
-    return { error: 'Failed to generate report summary.' };
   }
 }
