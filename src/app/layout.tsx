@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import Header from '@/components/common/Header';
 import { AuthProvider } from '@/hooks/useAuth';
 
 export const metadata: Metadata = {
@@ -27,7 +26,6 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
         <AuthProvider>
-          <Header />
           <main className="flex-1 flex flex-col">{children}</main>
           <Toaster />
         </AuthProvider>

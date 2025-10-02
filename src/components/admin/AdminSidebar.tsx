@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Home, Users, BarChart } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutDashboard, Home, Users, BarChart, UserCircle, LogOut } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +19,7 @@ import { useMemo } from 'react';
 import { mockAdmins } from '@/lib/data';
 import { AdminRole } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { Button } from '../ui/button';
 
 const allMenuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [AdminRole.SuperAdmin, AdminRole.DepartmentAdmin] },
@@ -37,7 +39,8 @@ function SidebarSkeleton() {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  const router = useRouter();
 
   const adminData = useMemo(() => {
     if (!user) return null;
@@ -47,7 +50,12 @@ export default function AdminSidebar() {
   const menuItems = useMemo(() => {
       if (!adminData) return [];
       return allMenuItems.filter(item => item.roles.includes(adminData.role));
-  }, [adminData])
+  }, [adminData]);
+
+  const handleSignOut = () => {
+    logout();
+    router.push('/');
+  };
 
 
   return (
@@ -75,7 +83,30 @@ export default function AdminSidebar() {
             </SidebarMenu>
         )}
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="mt-auto">
+        <SidebarSeparator />
+         <SidebarMenuItem>
+            <Link href="/profile" passHref>
+                <SidebarMenuButton
+                isActive={pathname === '/profile'}
+                tooltip="Profile"
+                as="a"
+                >
+                <UserCircle />
+                <span>Profile</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+             <SidebarMenuButton
+              tooltip="Sign Out"
+              onClick={handleSignOut}
+            >
+              <LogOut />
+              <span>Sign Out</span>
+            </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarSeparator />
         <Link href="/dashboard" passHref>
           <SidebarMenuButton tooltip="Back to Dashboard" as="a">
             <Home />
