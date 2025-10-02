@@ -1,5 +1,3 @@
-// This is a new file.
-
 'use client';
 
 import {
@@ -7,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Report, User, ReportStatus } from '@/lib/types';
+import { Report, UserProfile, ReportStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -42,7 +40,7 @@ const StarRating = ({ rating, setRating, disabled }: { rating: number, setRating
     </div>
 );
 
-export default function ReportDetailsDialog({ report, user, onSaveFeedback }: { report: Report | null, user: User | null, onSaveFeedback: (reportId: string, rating: number, feedback: string) => void }) {
+export default function ReportDetailsDialog({ report, user, onSaveFeedback }: { report: Report | null, user: UserProfile | null, onSaveFeedback: (reportId: string, rating: number, feedback: string) => void }) {
     const [rating, setRating] = useState(0);
     const [feedback, setFeedback] = useState("");
 
@@ -58,7 +56,7 @@ export default function ReportDetailsDialog({ report, user, onSaveFeedback }: { 
     if (!report) return null;
 
     const needsFeedback = report.status === ReportStatus.PendingCitizenFeedback;
-    const canEditFeedback = user && report.citizenId === user.id && needsFeedback;
+    const canEditFeedback = user && report.citizenId === user.uid && needsFeedback;
 
     return (
          <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -107,7 +105,7 @@ export default function ReportDetailsDialog({ report, user, onSaveFeedback }: { 
                     </div>
                 )}
                 
-                {(report.resolution || needsFeedback) && user?.id === report.citizenId && (
+                {(report.resolution || needsFeedback) && user?.uid === report.citizenId && (
                     <div className="space-y-4 rounded-lg border bg-secondary/50 p-4">
                         <h4 className="font-semibold text-lg">Your Feedback</h4>
                          <div className="space-y-2">

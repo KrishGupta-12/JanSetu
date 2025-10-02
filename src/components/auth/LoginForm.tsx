@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Loader2, User, UserCog, Shield } from 'lucide-react';
 import { mockCitizens, mockAdmins } from '@/lib/data';
+import { AdminRole } from '@/lib/types';
 
 type DemoUser = {
   email: string;
@@ -16,12 +17,12 @@ type DemoUser = {
 };
 
 const demoUsers: DemoUser[] = [
-  { email: mockCitizens[0].email, name: mockCitizens[0].name, role: 'Citizen', icon: <User /> },
-  { email: mockCitizens[1].email, name: mockCitizens[1].name, role: 'Citizen', icon: <User /> },
-  { email: mockAdmins[0].email, name: 'Super Admin', role: 'Municipal Head', icon: <Shield /> },
-  { email: mockAdmins[1].email, name: 'Waste Dept.', role: 'Admin', icon: <UserCog /> },
-  { email: mockAdmins[2].email, name: 'Pothole Dept.', role: 'Admin', icon: <UserCog /> },
-  { email: mockAdmins[3].email, name: 'Streetlight Dept.', role: 'Admin', icon: <UserCog /> },
+  { email: 'amit.kumar@example.com', name: 'Amit Kumar', role: 'Citizen', icon: <User /> },
+  { email: 'priya.sharma@example.com', name: 'Priya Sharma', role: 'Citizen', icon: <User /> },
+  { email: 'super.admin@jancorp.com', name: 'Super Admin', role: 'Municipal Head', icon: <Shield /> },
+  { email: 'waste.admin@jancorp.com', name: 'Waste Dept.', role: 'Admin', icon: <UserCog /> },
+  { email: 'pothole.admin@jancorp.com', name: 'Pothole Dept.', role: 'Admin', icon: <UserCog /> },
+  { email: 'streetlight.admin@jancorp.com', name: 'Streetlight Dept.', role: 'Admin', icon: <UserCog /> },
 ];
 
 
@@ -31,35 +32,37 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleDemoLogin = (email: string, password_unused: string) => {
+  const handleDemoLogin = async (email: string) => {
     setLoadingUser(email);
     
-    // The password is 'admin123' for all mock users
-    const password = 'admin123';
+    const password = 'password123';
     
-    setTimeout(() => {
-      const result = login(email, password);
+    const result = await login(email, password);
 
-      if (result.success) {
-        const isAdmin = mockAdmins.some(admin => admin.email === email);
-        if (isAdmin) {
-          router.push('/admin');
-        } else {
-          router.push('/dashboard');
-        }
-        toast({
-          title: 'Success',
-          description: 'Logged in successfully!',
-        });
+    if (result.success) {
+      // The useAuth hook will handle fetching the user profile and redirecting.
+      // We can optimistically check the email to decide where to navigate.
+      const isAdmin = demoUsers.find(u => u.email === email && (u.role === 'Admin' || u.role === 'Municipal Head'));
+      
+      toast({
+        title: 'Success',
+        description: 'Logged in successfully!',
+      });
+      
+      if (isAdmin) {
+        router.push('/admin');
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: result.message,
-        });
+        router.push('/dashboard');
       }
-      setLoadingUser(null);
-    }, 500);
+
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: result.message,
+      });
+    }
+    setLoadingUser(null);
   };
 
   return (
@@ -67,7 +70,7 @@ export function LoginForm() {
       {demoUsers.map((demoUser) => (
         <Button
           key={demoUser.email}
-          onClick={() => handleDemoLogin(demoUser.email, 'admin123')}
+          onClick={() => handleDemoLogin(demoUser.email)}
           disabled={!!loadingUser}
           className="w-full justify-start h-14"
           variant="outline"

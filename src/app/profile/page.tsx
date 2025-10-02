@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star, TrendingUp } from 'lucide-react';
-import { Citizen, Report, ReportStatus } from '@/lib/types';
+import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star } from 'lucide-react';
+import { Report, ReportStatus } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import { mockCitizens, mockReports } from '@/lib/data';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+
 
 const ContributionCard = ({ title, value, icon }: { title: string; value: string | number; icon: React.ReactNode }) => (
     <Card>
@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const { user, isLoading: isUserLoading, updateUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -49,14 +50,14 @@ export default function ProfilePage() {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const userProfile = useMemo(() => {
-    if (!user) return null;
-    return mockCitizens.find(c => c.id === user.id) || user;
-  }, [user]);
+  const userReportsQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
+    [user, firestore]
+  );
+  const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
 
   const userStats = useMemo(() => {
-    if (!user) return { total: 0, resolved: 0, inProgress: 0, rejected: 0, score: 0 };
-    const userReports = mockReports.filter(r => r.citizenId === user.id);
+    if (!userReports) return { total: 0, resolved: 0, inProgress: 0, rejected: 0, score: 0 };
     const resolved = userReports.filter(r => r.status === ReportStatus.Resolved).length;
     const score = resolved * 5 + userReports.length;
     return {
@@ -66,7 +67,7 @@ export default function ProfilePage() {
         rejected: userReports.filter(r => r.status === ReportStatus.Rejected).length,
         score,
     }
-  }, [user]);
+  }, [userReports]);
   
   const contribution = getContributionLevel(userStats.score);
 
@@ -77,30 +78,29 @@ export default function ProfilePage() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-      if(userProfile) {
-          setName(userProfile.name || '');
-          setPhone(userProfile.phone || '');
-          setAddress(userProfile.address || '');
-          setCity(userProfile.city || '');
-          setState(userProfile.state || '');
+      if(user) {
+          setName(user.name || '');
+          setPhone(user.phone || '');
+          setAddress(user.address || '');
+          setCity(user.city || '');
+          setState(user.state || '');
       }
-  }, [userProfile]);
+  }, [user]);
 
   const handleSave = async () => {
       if (!user) return;
       setIsSaving(true);
       
-      setTimeout(() => {
-        const updatedUser = { ...user, name, phone, address, city, state };
-        updateUser(updatedUser); 
-        toast({ title: 'Success', description: 'Profile updated successfully.' });
-        setIsSaving(false);
-      }, 1000);
+      const updatedData = { name, phone, address, city, state };
+      updateUser(updatedData);
+
+      toast({ title: 'Success', description: 'Profile updated successfully.' });
+      setIsSaving(false);
   }
 
-  const isLoading = isUserLoading;
+  const isLoading = isUserLoading || isReportsLoading;
 
-  if (isLoading || !userProfile) {
+  if (isLoading || !user) {
      return (
        <div className="container mx-auto max-w-4xl py-8 px-4">
          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -125,7 +125,7 @@ export default function ProfilePage() {
                     <CardHeader>
                         <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
                         <CardDescription>
-                            Your unique JanSetu ID is <strong>{userProfile.janId}</strong>.
+                            Your unique JanSetu ID is <strong>{user.janId}</strong>.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -169,7 +169,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" value={userProfile.email} disabled />
+                            <Input id="email" value={user.email} disabled />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Phone Number</Label>
@@ -177,7 +177,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="dob">Date of Birth</Label>
-                            <Input id="dob" value={userProfile.dob || ''} disabled />
+                            <Input id="dob" value={user.dob || ''} disabled />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="address">Address</Label>

@@ -20,9 +20,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Report } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { ReportStatus } from '@/lib/types';
-import { mockReports, mockAdmins } from '@/lib/data';
+import { ReportStatus, AdminRole } from '@/lib/types';
 import { Files, Megaphone, Trophy } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit } from 'firebase/firestore';
+
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -37,28 +39,30 @@ const statusStyles: { [key in ReportStatus]: string } = {
 export default function DashboardPage() {
   const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
+  const firestore = useFirestore();
 
-  const userReports = useMemo(() => {
-    if (!user) return [];
-    return mockReports.filter(report => report.citizenId === user.id);
-  }, [user]);
-
-  const isAdmin = useMemo(() => {
-    if (!user) return false;
-    return mockAdmins.some(admin => admin.email === user.email);
-  }, [user]);
+  const userReportsQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid), limit(2)) : null,
+    [user, firestore]
+  );
+  const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
+  
+  const allReportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+  const { data: allReports, isLoading: areAllReportsLoading } = useCollection<Report>(allReportsQuery);
 
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-     if (!isUserLoading && user && isAdmin) {
-      router.push('/admin'); // Redirect admins to admin dashboard
+     if (!isUserLoading && user && user.role) { // Any role indicates an admin
+      router.push('/admin');
     }
-  }, [user, isAdmin, isUserLoading, router]);
+  }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user || isAdmin) {
+  const isLoading = isUserLoading || isReportsLoading || areAllReportsLoading;
+
+  if (isLoading || !user || user.role) {
     return (
        <div className="flex-1 w-full">
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
@@ -87,7 +91,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
         <div className="xl:col-span-7 rounded-xl shadow-lg overflow-hidden h-[400px] xl:h-[600px] flex flex-col bg-card">
           <MapProvider>
-            <MapView reports={mockReports} />
+            <MapView reports={allReports || []} />
           </MapProvider>
         </div>
         <div className="xl:col-span-5 flex flex-col gap-6">

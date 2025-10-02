@@ -176,7 +176,7 @@ export default function ReportForm() {
     <>
       <Form {...form}>
         <form ref={formRef} action={dispatch} className="space-y-8">
-           <input type="hidden" name="citizenId" value={user.id} />
+           <input type="hidden" name="citizenId" value={user.uid} />
           <FormField
             control={form.control}
             name="category"

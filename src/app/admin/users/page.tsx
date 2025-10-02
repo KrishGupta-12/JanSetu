@@ -1,6 +1,6 @@
 'use client';
 
-import { Citizen, Report, ReportStatus, AdminRole } from '@/lib/types';
+import { UserProfile, Report, ReportStatus, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -25,16 +25,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { mockCitizens, mockReports, mockAdmins } from '@/lib/data';
 import { useState, useEffect, useMemo } from 'react';
 import { ShieldAlert, MoreHorizontal, Ban, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { add } from 'date-fns';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-type EnrichedCitizen = Citizen & {
+type EnrichedCitizen = UserProfile & {
   rejectedReports: number;
   isFlagged: boolean;
+  isBanned: boolean;
 };
 
 function UserTableSkeleton() {
@@ -75,27 +78,20 @@ function UserTableSkeleton() {
 
 
 export default function UsersPage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user: adminUser, isLoading: isUserLoading } = useAuth();
   const { toast } = useToast();
-  const [citizens, setCitizens] = useState<Citizen[]>(mockCitizens);
-  const [reports, setReports] = useState<Report[]>(mockReports);
-  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    // Simulate fetching data
-    setTimeout(() => {
-        setIsLoading(false);
-    }, 1000)
-  }, []);
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', null)), [firestore]);
+  const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(usersQuery);
 
-  const adminData = useMemo(() => {
-    if (!user) return null;
-    return mockAdmins.find(admin => admin.email === user.email);
-  }, [user]);
+  const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+  const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
-  const citizenData = useMemo(() => {
+  const citizenData: EnrichedCitizen[] = useMemo(() => {
+    if (!citizens || !reports) return [];
     return citizens.map(citizen => {
-      const rejectedReports = reports.filter(report => report.citizenId === citizen.id && report.status === ReportStatus.Rejected).length;
+      const rejectedReports = reports.filter(report => report.citizenId === citizen.uid && report.status === ReportStatus.Rejected).length;
       const isFlagged = rejectedReports >= 5;
       const isBanned = !!citizen.bannedUntil && (citizen.bannedUntil === 'lifetime' || new Date(citizen.bannedUntil) > new Date());
       
@@ -109,12 +105,13 @@ export default function UsersPage() {
   }, [citizens, reports]);
 
   const handleBan = (citizenId: string, duration: Duration | 'lifetime') => {
-    const citizen = citizens.find(c => c.id === citizenId);
+    const citizen = citizens?.find(c => c.uid === citizenId);
     if (!citizen) return;
 
     const bannedUntil = duration === 'lifetime' ? 'lifetime' : add(new Date(), duration).toISOString();
     
-    setCitizens(citizens.map(c => c.id === citizenId ? { ...c, bannedUntil } : c));
+    const userDocRef = doc(firestore, 'users', citizenId);
+    updateDocumentNonBlocking(userDocRef, { bannedUntil });
 
     toast({
       title: 'User Banned',
@@ -123,10 +120,11 @@ export default function UsersPage() {
   };
 
   const handleUnban = (citizenId: string) => {
-     const citizen = citizens.find(c => c.id === citizenId);
+     const citizen = citizens?.find(c => c.uid === citizenId);
     if (!citizen) return;
 
-    setCitizens(citizens.map(c => c.id === citizenId ? { ...c, bannedUntil: null } : c));
+    const userDocRef = doc(firestore, 'users', citizenId);
+    updateDocumentNonBlocking(userDocRef, { bannedUntil: null });
 
      toast({
       title: 'User Unbanned',
@@ -145,7 +143,7 @@ export default function UsersPage() {
     { label: 'Lifetime', duration: 'lifetime' },
   ];
 
-  const isLoadingPage = isUserLoading || isLoading;
+  const isLoadingPage = isUserLoading || citizensLoading || reportsLoading;
 
   if (isLoadingPage) {
     return <UserTableSkeleton />;
@@ -172,7 +170,7 @@ export default function UsersPage() {
               </TableHeader>
               <TableBody>
                 {citizenData.map((citizen) => (
-                  <TableRow key={citizen.id} className={citizen.isFlagged && !citizen.isBanned ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+                  <TableRow key={citizen.uid} className={citizen.isFlagged && !citizen.isBanned ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
@@ -207,7 +205,7 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                       {adminData?.role === AdminRole.SuperAdmin && (
+                       {adminUser?.role === AdminRole.SuperAdmin && (
                          <DropdownMenu>
                            <DropdownMenuTrigger asChild>
                              <Button variant="ghost" className="h-8 w-8 p-0">
@@ -219,7 +217,7 @@ export default function UsersPage() {
                              <DropdownMenuLabel>Admin Actions</DropdownMenuLabel>
                              <DropdownMenuSeparator />
                               {citizen.isBanned ? (
-                                <DropdownMenuItem onClick={() => handleUnban(citizen.id)}>
+                                <DropdownMenuItem onClick={() => handleUnban(citizen.uid)}>
                                   <RotateCcw className="mr-2 h-4 w-4" />
                                   Unban User
                                 </DropdownMenuItem>
@@ -233,7 +231,7 @@ export default function UsersPage() {
                                     <DropdownMenuLabel>Select Duration</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     {banDurations.map(d => (
-                                      <DropdownMenuItem key={d.label} onClick={() => handleBan(citizen.id, d.duration as any)}>
+                                      <DropdownMenuItem key={d.label} onClick={() => handleBan(citizen.uid, d.duration as any)}>
                                         {d.label}
                                       </DropdownMenuItem>
                                     ))}

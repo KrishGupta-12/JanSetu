@@ -60,49 +60,36 @@ export type AqiSensor = {
   name: string;
 };
 
-export type Citizen = {
-    id: string;
-    janId: string;
-    name: string;
-    email: string;
-    phone: string;
-    dateJoined: string; // ISO string
-    dob?: string; // yyyy-mm-dd
-    address?: string;
-    city?: string;
-    state?: string;
-    bannedUntil?: string | 'lifetime' | null; // ISO string, 'lifetime', or null
-}
+export type UserProfile = {
+  uid: string;
+  janId: string;
+  name: string;
+  email: string;
+  phone: string;
+  dateJoined: string; // ISO string
+  dob?: string; // yyyy-mm-dd
+  address?: string;
+  city?: string;
+  state?: string;
+  bannedUntil?: string | 'lifetime' | null; // ISO string, 'lifetime', or null
+  role?: AdminRole;
+  department?: ReportCategory;
+};
+
 
 export enum AdminRole {
     SuperAdmin = 'super_admin',
     DepartmentAdmin = 'department_admin'
 }
 
-export type Admin = {
-    id: string;
-    janId: string;
-    name: string;
-    email: string;
+export type Admin = UserProfile & {
     role: AdminRole;
-    department?: ReportCategory; // Department admins are linked to a report category
-    dateJoined: string; // ISO string
+};
+
+export type Citizen = UserProfile & {
+    role: undefined;
 }
 
 
 // A generic user type for the auth context
-export type User = {
-  id: string;
-  janId: string;
-  name: string;
-  email: string;
-  phone: string;
-  dateJoined: string;
-  dob?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  role?: AdminRole;
-  department?: ReportCategory;
-  bannedUntil?: string | 'lifetime' | null;
-}
+export type User = UserProfile;

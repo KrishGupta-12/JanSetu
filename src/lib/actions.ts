@@ -4,8 +4,10 @@ import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { classifyReport } from '@/ai/flows/classify-report';
-import { ReportCategory, ReportUrgency } from './types';
-import { mockReports } from './data';
+import { ReportCategory } from './types';
+import { initializeFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, getDocs, query } from 'firebase/firestore';
+import { Report } from './types';
 
 const reportSchema = z.object({
   category: z.nativeEnum(ReportCategory),
@@ -42,13 +44,12 @@ export async function submitReport(
     };
   }
 
-  const { photo, description } = validatedFields.data;
+  const { photo, description, citizenId, latitude, longitude } = validatedFields.data;
+  const { firestore } = initializeFirebase();
 
   try {
     let moderatedPhotoDataUri: string | undefined = undefined;
     if (photo && photo.startsWith('data:image')) {
-      // In a real app, we would use the moderated image.
-      // For now, we just call the flow to show it's connected.
       const moderationResult = await moderateImage({ photoDataUri: photo });
       moderatedPhotoDataUri = moderationResult.moderatedPhotoDataUri;
     }
@@ -56,18 +57,22 @@ export async function submitReport(
     // AI Classification
     const classificationResult = await classifyReport({ description });
 
+    const reportData = {
+        ...validatedFields.data,
+        imageUrl: moderatedPhotoDataUri || validatedFields.data.photo || '',
+        category: classificationResult.category,
+        urgency: classificationResult.urgency,
+        reportDate: serverTimestamp(),
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        status: 'Pending',
+        upvotes: 0,
+        citizenIdsWhoUpvoted: [],
+    };
 
     // In a real app, this is where you'd save the report to the database.
-    // We'll just log it to the console and return success.
-    console.log('Mock Report Submitted:', {
-        ...validatedFields.data,
-        imageUrl: moderatedPhotoDataUri || validatedFields.data.photo,
-        category: classificationResult.category, // Using AI classified category
-        urgency: classificationResult.urgency, // Using AI classified urgency
-    });
-
-    // Simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const reportsCollection = collection(firestore, 'issueReports');
+    await addDoc(reportsCollection, reportData);
 
     return {
       status: 'success',
@@ -84,17 +89,24 @@ export async function submitReport(
 
 export async function summarizeAllReports(): Promise<{ summary: string } | { error: string }> {
   try {
-    if (mockReports.length === 0) {
+    const { firestore } = initializeFirebase();
+    const reportsCollection = collection(firestore, 'issueReports');
+    const q = query(reportsCollection);
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
       return { summary: "No reports to summarize at the moment." };
     }
 
-    const reportsForSummary = mockReports.map(doc => ({
-        category: doc.category,
-        description: doc.description,
-        location: `${doc.latitude}, ${doc.longitude}`,
-    }));
+    const reportsForSummary = querySnapshot.docs.map(doc => {
+      const data = doc.data() as Report;
+      return {
+        category: data.category,
+        description: data.description,
+        location: `${data.latitude}, ${data.longitude}`,
+      };
+    });
     
-    // The Genkit flow can still be called with mock data.
     const result = await summarizeReports({ reports: reportsForSummary });
     
     return { summary: result.summary };

@@ -1,10 +1,11 @@
 'use client'
-import { Report, ReportCategory, ReportStatus, AdminRole } from '@/lib/types';
+import { Report, ReportCategory, ReportStatus, AdminRole, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { useMemo } from 'react';
-import { mockReports, mockAdmins } from '@/lib/data';
 import { differenceInDays, subDays } from 'date-fns';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: 'hsl(var(--chart-1))',
@@ -25,10 +26,18 @@ const categoryColors: {[key in ReportCategory]: string} = {
 
 
 export default function AnalyticsPage() {
-    const reports = mockReports;
-    const departmentAdmins = mockAdmins.filter(a => a.role === AdminRole.DepartmentAdmin);
+    const firestore = useFirestore();
+
+    const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+    const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+
+    const departmentAdmins = useMemo(() => (users || []).filter(u => u.role === AdminRole.DepartmentAdmin), [users]);
 
     const reportsByStatus = useMemo(() => {
+        if (!reports) return [];
         const counts = Object.values(ReportStatus).reduce((acc, status) => {
             acc[status] = 0;
             return acc;
@@ -43,6 +52,7 @@ export default function AnalyticsPage() {
     }, [reports]);
 
      const reportsByCategory = useMemo(() => {
+        if (!reports) return [];
         const counts = Object.values(ReportCategory).reduce((acc, category) => {
             acc[category] = 0;
             return acc;
@@ -57,6 +67,7 @@ export default function AnalyticsPage() {
     }, [reports]);
 
     const reportsOverTime = useMemo(() => {
+        if (!reports) return [];
         const last30Days = Array.from({ length: 30 }, (_, i) => subDays(new Date(), i)).reverse();
         const data = last30Days.map(date => {
             const dateString = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -67,8 +78,9 @@ export default function AnalyticsPage() {
     }, [reports]);
     
     const departmentPerformance = useMemo(() => {
+        if (!reports || !departmentAdmins) return [];
         return departmentAdmins.map(admin => {
-            const deptReports = reports.filter(r => r.assignedAdminId === admin.id && r.status === ReportStatus.Resolved && r.resolution);
+            const deptReports = reports.filter(r => r.assignedAdminId === admin.uid && r.status === ReportStatus.Resolved && r.resolution);
             if(deptReports.length === 0) return null;
 
             const totalResolutionTime = deptReports.reduce((acc, r) => {
@@ -88,6 +100,10 @@ export default function AnalyticsPage() {
             }
         }).filter(Boolean);
     }, [reports, departmentAdmins]);
+
+    if (reportsLoading || usersLoading) {
+        return <div>Loading analytics...</div>
+    }
 
 
     return (

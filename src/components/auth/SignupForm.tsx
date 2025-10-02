@@ -48,26 +48,23 @@ export function SignupForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      const result = signup(values.name, values.email, values.password);
+    const result = await signup(values.name, values.email, values.password);
 
-      if (result.success) {
-        router.push('/dashboard');
-        toast({
-          title: 'Welcome!',
-          description: 'Your account has been created.',
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Sign Up Failed',
-          description: result.message,
-        });
-      }
+    if (result.success) {
+      router.push('/dashboard');
+      toast({
+        title: 'Welcome!',
+        description: 'Your account has been created.',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: result.message,
+      });
+    }
 
-      setIsLoading(false);
-    }, 1000);
+    setIsLoading(false);
   };
 
   return (

@@ -1,7 +1,6 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
-import { mockReports } from '@/lib/data';
-import { Report, ReportStatus, Resolution, User } from '@/lib/types';
+import { Report, ReportStatus, UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,14 +14,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-} from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReportDetailsDialog from '@/components/dashboard/ReportDetailsDialog';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -35,23 +35,26 @@ const statusStyles: { [key in ReportStatus]: string } = {
 
 
 export default function MyReportsPage() {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading: isUserLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const [reports, setReports] = useState<Report[]>(mockReports);
+    const firestore = useFirestore();
+
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
     
     useEffect(() => {
-        if (!isLoading && !user) {
+        if (!isUserLoading && !user) {
             router.push('/login');
         }
-    }, [user, isLoading, router]);
+    }, [user, isUserLoading, router]);
 
-    const userReports = useMemo(() => {
-        if (!user) return [];
-        return reports.filter(r => r.citizenId === user.id);
-    }, [user, reports]);
+    const userReportsQuery = useMemoFirebase(
+        () => user ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
+        [user, firestore]
+    );
+
+    const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
 
     const handleViewDetails = (report: Report) => {
         setSelectedReport(report);
@@ -59,25 +62,18 @@ export default function MyReportsPage() {
     }
     
     const handleSaveFeedback = (reportId: string, rating: number, feedback: string) => {
-        setReports(prev => prev.map(r => {
-            if (r.id === reportId && r.resolution) {
-                return {
-                    ...r,
-                    status: ReportStatus.PendingApproval,
-                    resolution: {
-                        ...r.resolution,
-                        citizenRating: rating,
-                        citizenFeedback: feedback,
-                    }
-                }
-            }
-            return r;
-        }));
+        const reportDocRef = doc(firestore, 'issueReports', reportId);
+        const updateData = {
+            'resolution.citizenRating': rating,
+            'resolution.citizenFeedback': feedback,
+            'status': ReportStatus.PendingApproval
+        };
+        updateDocumentNonBlocking(reportDocRef, updateData);
         toast({ title: "Feedback Submitted", description: "Thank you for your feedback!" });
         setIsDetailViewOpen(false);
     }
 
-    if (isLoading || !user) {
+    if (isUserLoading || isReportsLoading || !user) {
         return <div className="container mx-auto py-8"><Skeleton className="h-96 w-full" /></div>;
     }
 
@@ -101,14 +97,14 @@ export default function MyReportsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {userReports.map(report => (
+                                {userReports?.map(report => (
                                      <TableRow key={report.id}>
                                         <TableCell className="font-medium">{report.id.substring(0, 7)}</TableCell>
                                         <TableCell className="max-w-sm truncate">{report.description}</TableCell>
                                         <TableCell>
                                             <Badge className={cn('font-semibold', statusStyles[report.status])}>{report.status}</Badge>
                                         </TableCell>
-                                        <TableCell>{new Date(report.reportDate).toLocaleDateString()}</TableCell>
+                                        <TableCell>{report.reportDate ? new Date(report.reportDate).toLocaleDateString() : 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="sm" onClick={() => handleViewDetails(report)}>
                                                 <Eye className="mr-2 h-4 w-4"/> View

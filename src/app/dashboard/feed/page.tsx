@@ -1,10 +1,9 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockReports, mockCitizens } from '@/lib/data';
-import { Report, Citizen, ReportStatus, User } from '@/lib/types';
+import { Report, UserProfile, ReportStatus } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -12,8 +11,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ThumbsUp, Eye } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import ReportDetailsDialog from '@/components/dashboard/ReportDetailsDialog';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -24,7 +26,6 @@ const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.PendingApproval]: 'bg-pink-100 text-pink-800 border-pink-300 dark:bg-pink-900/50 dark:text-pink-300 dark:border-pink-700',
 };
 
-type EnrichedReport = Report & { citizen?: Citizen };
 
 function FeedSkeleton() {
     return (
@@ -51,46 +52,62 @@ function FeedSkeleton() {
 
 export default function CommunityFeedPage() {
     const { user, isLoading: isUserLoading } = useAuth();
-    const [isLoading, setIsLoading] = useState(true);
-    const [reports, setReports] = useState<EnrichedReport[]>([]);
+    const firestore = useFirestore();
+
+    const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports'), orderBy('reportDate', 'desc')), [firestore]);
+    const { data: reports, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
+
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
+
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
 
-    useEffect(() => {
-        const enrichedReports = mockReports
-            .map(report => {
-                const citizen = mockCitizens.find(c => c.id === report.citizenId);
-                return { ...report, citizen };
-            })
-            .sort((a, b) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
-        setReports(enrichedReports);
-    }, []);
-
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 500);
-        return () => clearTimeout(timer);
-    }, []);
+    const enrichedReports = useMemo(() => {
+        if (!reports || !users) return [];
+        return reports.map(report => {
+            const citizen = users.find(u => u.uid === report.citizenId);
+            return { ...report, citizen };
+        });
+    }, [reports, users]);
 
     const handleUpvote = (reportId: string) => {
         if (!user) return;
-        setReports(prevReports =>
-            prevReports.map(report => {
-                if (report.id === reportId && !report.citizenIdsWhoUpvoted.includes(user.id)) {
-                    return {
-                        ...report,
-                        upvotes: report.upvotes + 1,
-                        citizenIdsWhoUpvoted: [...report.citizenIdsWhoUpvoted, user.id],
-                    };
-                }
-                return report;
-            })
-        );
+        const reportRef = doc(firestore, 'issueReports', reportId);
+        const report = reports?.find(r => r.id === reportId);
+        
+        if (report && report.citizenIdsWhoUpvoted.includes(user.uid)) {
+            // Already upvoted, so remove upvote
+            updateDocumentNonBlocking(reportRef, {
+                upvotes: report.upvotes - 1,
+                citizenIdsWhoUpvoted: arrayRemove(user.uid),
+            });
+        } else if (report) {
+            // Not upvoted, so add upvote
+            updateDocumentNonBlocking(reportRef, {
+                upvotes: report.upvotes + 1,
+                citizenIdsWhoUpvoted: arrayUnion(user.uid),
+            });
+        }
+    };
+    
+    const handleSaveFeedback = (reportId: string, rating: number, feedback: string) => {
+        const reportDocRef = doc(firestore, 'issueReports', reportId);
+        const updateData = {
+            'resolution.citizenRating': rating,
+            'resolution.citizenFeedback': feedback,
+            'status': ReportStatus.PendingApproval
+        };
+        updateDocumentNonBlocking(reportDocRef, updateData);
+        setIsDetailViewOpen(false);
     };
 
     const handleViewDetails = (report: Report) => {
         setSelectedReport(report);
         setIsDetailViewOpen(true);
     };
+
+    const isLoading = isUserLoading || isReportsLoading || isUsersLoading;
 
     return (
         <div className="space-y-6">
@@ -100,9 +117,9 @@ export default function CommunityFeedPage() {
                     See the latest issues being reported by citizens across the city.
                 </p>
             </div>
-            {isLoading || isUserLoading ? <FeedSkeleton /> : (
+            {isLoading ? <FeedSkeleton /> : (
                  <div className="space-y-6 max-w-3xl mx-auto">
-                    {reports.map(report => (
+                    {enrichedReports.map(report => (
                         <Card key={report.id} className="shadow-md">
                             <CardHeader className="flex flex-row items-start gap-4">
                                 <Avatar className="h-12 w-12">
@@ -112,7 +129,7 @@ export default function CommunityFeedPage() {
                                 <div className='flex-1'>
                                     <p className="font-semibold">{report.citizen?.name || 'Anonymous'}</p>
                                     <p className="text-sm text-muted-foreground">
-                                        {formatDistanceToNow(new Date(report.reportDate), { addSuffix: true })}
+                                        {report.reportDate ? formatDistanceToNow(new Date(report.reportDate), { addSuffix: true }) : 'Just now'}
                                     </p>
                                 </div>
                                 <Badge className={cn("ml-auto", statusStyles[report.status])}>{report.status}</Badge>
@@ -130,9 +147,9 @@ export default function CommunityFeedPage() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleUpvote(report.id)}
-                                        disabled={!user || report.citizenIdsWhoUpvoted.includes(user.id)}
+                                        disabled={!user}
                                     >
-                                        <ThumbsUp className="mr-2 h-4 w-4" />
+                                        <ThumbsUp className={cn("mr-2 h-4 w-4", user && report.citizenIdsWhoUpvoted.includes(user.uid) ? "text-primary fill-primary" : "")} />
                                         Upvote ({report.upvotes})
                                     </Button>
                                     <Button variant="ghost" size="sm" onClick={() => handleViewDetails(report)}>
@@ -145,7 +162,7 @@ export default function CommunityFeedPage() {
                  </div>
             )}
             <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-                <ReportDetailsDialog report={selectedReport} user={user as User | null} onSaveFeedback={() => {}} />
+                <ReportDetailsDialog report={selectedReport} user={user} onSaveFeedback={handleSaveFeedback} />
             </Dialog>
         </div>
     );
