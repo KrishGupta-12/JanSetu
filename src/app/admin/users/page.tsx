@@ -194,7 +194,7 @@ export default function UsersPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                        {areUsersLoading ? 'Loading users...' : (error ? `Error loading users. Check security rules.` : 'No citizen users found.')}
+                        {areUsersLoading ? 'Loading users...' : (error ? `Error: Insufficient permissions. Check Firestore rules.` : 'No citizen users found.')}
                       </TableCell>
                     </TableRow>
                   )}
