@@ -26,7 +26,6 @@ const allMenuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
   { href: '/admin/reports', label: 'Reports', icon: Files, roles: [UserRole.SuperAdmin]},
   { href: '/admin/my-department', label: 'My Department', icon: Building, roles: DepartmentAdminRoles },
-  { href: '/admin/my-team', label: 'My Team', icon: Users2, roles: DepartmentAdminRoles },
   { href: '/admin/users', label: 'Users', icon: Users, roles: [UserRole.SuperAdmin] },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart, roles: [UserRole.SuperAdmin] },
   { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
