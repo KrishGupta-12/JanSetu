@@ -74,8 +74,7 @@ export default function LeaderboardPage() {
         
         return users.map(u => ({
             ...u,
-            // Calculate score based on the fields from the user document
-            score: ((u.resolvedReports ?? 0) * 5) + (u.totalReports ?? 0),
+            score: (Number(u.resolvedReports ?? 0) * 5) + Number(u.totalReports ?? 0),
         })).sort((a, b) => b.score - a.score);
 
     }, [users]);
