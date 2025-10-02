@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, UserCog, Files, Megaphone, Users2 } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, Files, Megaphone, Users2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -49,9 +49,6 @@ export default function AdminSidebar() {
   const menuItems = useMemo(() => {
       if (!adminData || !adminData.role) return [];
       const userRoles = [adminData.role];
-      if(adminData.role === UserRole.SuperAdmin){
-        userRoles.push(...DepartmentAdminRoles);
-      }
       return allMenuItems.filter(item => item.roles.some(r => userRoles.includes(r)));
   }, [adminData]);
 

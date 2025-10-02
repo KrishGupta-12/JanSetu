@@ -57,20 +57,18 @@ export default function UsersPage() {
   // Effect to protect the route for super admins only
   useEffect(() => {
     if (!isUserLoading && (!adminUser || adminUser.role !== UserRole.SuperAdmin)) {
+      toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
       router.push('/admin');
     }
-  }, [isUserLoading, adminUser, router]);
-  
+  }, [isUserLoading, adminUser, router, toast]);
+
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
+    // Query for all users that are citizens
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore, adminUser]);
 
   const { data: users, isLoading: areUsersLoading, error } = useCollection<UserProfile>(usersQuery);
-
-  if (error) {
-    console.error("Firestore error fetching users:", error);
-  }
 
   const handleOpenManageDialog = (user: UserProfile) => {
     setSelectedUser(user);
@@ -108,24 +106,28 @@ export default function UsersPage() {
 
   const isLoading = isUserLoading || areUsersLoading;
 
-  if (isLoading || !adminUser || adminUser.role !== UserRole.SuperAdmin) {
+  if (!adminUser || adminUser.role !== UserRole.SuperAdmin) {
+    return <DashboardSkeleton />;
+  }
+  
+  function DashboardSkeleton() {
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight font-headline">User Management</h1>
-                <p className="text-muted-foreground">View and manage citizen accounts.</p>
-            </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Citizen Users</CardTitle>
-                    <CardDescription>A list of all registered citizens on the platform.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <UserTableSkeleton />
-                </CardContent>
-            </Card>
+      <div className="space-y-6">
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight font-headline">User Management</h1>
+            <p className="text-muted-foreground">View and manage citizen accounts.</p>
         </div>
-    )
+        <Card>
+            <CardHeader>
+                <CardTitle>Citizen Users</CardTitle>
+                <CardDescription>A list of all registered citizens on the platform.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <UserTableSkeleton />
+            </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -152,7 +154,19 @@ export default function UsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users && users.length > 0 ? (
+                  {isLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                          <TableCell colSpan={4}><Skeleton className="h-10 w-full" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-destructive h-24">
+                        Error: Could not fetch users. {error.message}
+                      </TableCell>
+                    </TableRow>
+                  ) : users && users.length > 0 ? (
                     users.map((user) => {
                       const isBanned = user.bannedUntil && new Date(user.bannedUntil) > new Date();
                       return (
@@ -181,7 +195,7 @@ export default function UsersPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {user.resolvedReports} / {user.totalReports}
+                            {user.resolvedReports || 0} / {user.totalReports || 0}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" onClick={() => handleOpenManageDialog(user)}>
@@ -194,7 +208,7 @@ export default function UsersPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
-                        {areUsersLoading ? 'Loading users...' : (error ? `Error: Insufficient permissions. Check Firestore rules.` : 'No citizen users found.')}
+                        No citizen users found.
                       </TableCell>
                     </TableRow>
                   )}
