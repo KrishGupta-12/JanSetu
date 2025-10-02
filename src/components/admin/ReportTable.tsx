@@ -36,6 +36,9 @@ import { ReportStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -48,7 +51,17 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
   
+  const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
+    const reportRef = doc(firestore, 'issue_reports', reportId);
+    updateDocumentNonBlocking(reportRef, { status, updatedAt: serverTimestamp() });
+    toast({
+      title: 'Status Updated',
+      description: `Report ${reportId} marked as ${status}.`
+    });
+  }
+
   const handleGenerateSummary = async () => {
     setIsSummaryLoading(true);
     setSummary('');
@@ -87,7 +100,7 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Reported On</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -96,16 +109,16 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
               <TableBody>
                 {reports.map((report) => (
                   <TableRow key={report.id}>
-                    <TableCell className="font-medium">{report.id}</TableCell>
+                    <TableCell className="font-medium">{report.id.substring(0, 7)}...</TableCell>
                     <TableCell>{report.category}</TableCell>
-                    <TableCell>{report.address}</TableCell>
+                    <TableCell className="max-w-xs truncate">{report.description}</TableCell>
                     <TableCell>
                       <Badge className={cn('font-semibold', statusStyles[report.status])}>
                         {report.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {report.createdAt.toLocaleDateString()}
+                      {new Date(report.reportDate).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -119,8 +132,8 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem>View Details</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem>Mark as In Progress</DropdownMenuItem>
-                          <DropdownMenuItem>Mark as Resolved</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.InProgress)}>Mark as In Progress</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.Resolved)}>Mark as Resolved</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

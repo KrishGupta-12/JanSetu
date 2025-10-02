@@ -1,8 +1,6 @@
 'use client';
 
 import { Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
-import { mockReports, mockAqiSensors } from '@/lib/data';
-import { ReportCategory } from '@/lib/types';
 import {
   Trash2,
   Wrench,
@@ -10,6 +8,11 @@ import {
   CloudRain,
   HelpCircle,
 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Report, ReportCategory, AqiSensor } from '@/lib/types';
+import { mockAqiSensors } from '@/lib/data';
+
 
 const ReportIcon = ({ category }: { category: ReportCategory }) => {
   const commonClass = 'w-5 h-5';
@@ -29,6 +32,14 @@ const ReportIcon = ({ category }: { category: ReportCategory }) => {
 
 const MapView = () => {
   const defaultCenter = { lat: 28.6139, lng: 77.209 };
+  const firestore = useFirestore();
+
+  const reportsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'issue_reports');
+  }, [firestore]);
+
+  const { data: reports } = useCollection<Report>(reportsQuery);
 
   return (
     <Map
@@ -39,8 +50,8 @@ const MapView = () => {
       disableDefaultUI={true}
       mapId="a2b3c4d5e6f7g8h9"
     >
-      {mockReports.map((report) => (
-        <AdvancedMarker key={report.id} position={report.location} title={report.description}>
+      {reports?.map((report) => (
+        <AdvancedMarker key={report.id} position={{ lat: report.latitude, lng: report.longitude }} title={report.description}>
           <Pin background={'#FF8A65'} borderColor={'#FF8A65'} glyphColor={'#FFF'}>
             <ReportIcon category={report.category} />
           </Pin>

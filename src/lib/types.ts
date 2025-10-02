@@ -14,16 +14,14 @@ export enum ReportStatus {
 
 export type Report = {
   id: string;
+  citizenId: string;
   category: ReportCategory;
   description: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  address: string;
-  photoUrl?: string;
+  latitude: number;
+  longitude: number;
+  imageUrl: string;
+  reportDate: string; // ISO string
   status: ReportStatus;
-  createdAt: Date;
 };
 
 export type AqiSensor = {

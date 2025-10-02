@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,13 +27,12 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapPin, Image as ImageIcon, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 import { submitReport, type FormState } from '@/lib/actions';
 import { reportCategories, ReportCategory } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useUser } from '@/firebase';
 
 const reportFormSchema = z.object({
   category: z.nativeEnum(ReportCategory, {
@@ -64,6 +64,8 @@ function SubmitButton() {
 }
 
 export default function ReportForm() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const [formState, dispatch] = useFormState(submitReport, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
@@ -84,6 +86,12 @@ export default function ReportForm() {
   });
 
   useEffect(() => {
+    if (!isUserLoading && !user) {
+        router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  useEffect(() => {
     if (formState.status === 'success') {
       toast({
         title: 'Success!',
@@ -93,6 +101,7 @@ export default function ReportForm() {
       setPhotoPreview(null);
       setLocationStatus('idle');
       formRef.current?.reset();
+      router.push('/dashboard');
     } else if (formState.status === 'error') {
       toast({
         variant: 'destructive',
@@ -100,9 +109,7 @@ export default function ReportForm() {
         description: formState.message,
       });
     }
-  }, [formState, toast, form]);
-  
-  const placeholderImage = PlaceHolderImages.find(img => img.id === 'report-placeholder');
+  }, [formState, toast, form, router]);
 
   const handleGetLocation = () => {
     setLocationStatus('loading');
@@ -132,6 +139,10 @@ export default function ReportForm() {
       reader.readAsDataURL(file);
     }
   };
+
+  if (isUserLoading || !user) {
+      return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin"/></div>
+  }
 
   return (
     <>
