@@ -8,10 +8,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
-import { Citizen } from '@/lib/types';
+import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star, TrendingUp } from 'lucide-react';
+import { Citizen, Report, ReportStatus } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
-import { mockCitizens } from '@/lib/data';
+import { mockCitizens, mockReports } from '@/lib/data';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+
+const ContributionCard = ({ title, value, icon }: { title: string; value: string | number; icon: React.ReactNode }) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+);
+
+const getContributionLevel = (score: number) => {
+    if (score >= 50) return { level: 'Platinum Contributor', color: 'bg-blue-500', icon: <Award className="text-white"/> };
+    if (score >= 25) return { level: 'Gold Contributor', color: 'bg-yellow-500', icon: <Award className="text-white"/> };
+    if (score >= 10) return { level: 'Silver Contributor', color: 'bg-gray-400', icon: <Star className="text-white"/> };
+    if (score >= 1) return { level: 'Bronze Contributor', color: 'bg-orange-700', icon: <Star className="text-white"/> };
+    return { level: 'New Contributor', color: 'bg-gray-500', icon: <Star className="text-white"/> };
+}
+
 
 export default function ProfilePage() {
   const { user, isLoading: isUserLoading, updateUser } = useAuth();
@@ -28,9 +51,24 @@ export default function ProfilePage() {
 
   const userProfile = useMemo(() => {
     if (!user) return null;
-    // In a real app, you'd fetch this. Here we find it in mock data.
     return mockCitizens.find(c => c.id === user.id) || user;
   }, [user]);
+
+  const userStats = useMemo(() => {
+    if (!user) return { total: 0, resolved: 0, inProgress: 0, rejected: 0, score: 0 };
+    const userReports = mockReports.filter(r => r.citizenId === user.id);
+    const resolved = userReports.filter(r => r.status === ReportStatus.Resolved).length;
+    const score = resolved * 5 + userReports.length;
+    return {
+        total: userReports.length,
+        resolved,
+        inProgress: userReports.filter(r => r.status === ReportStatus.InProgress).length,
+        rejected: userReports.filter(r => r.status === ReportStatus.Rejected).length,
+        score,
+    }
+  }, [user]);
+  
+  const contribution = getContributionLevel(userStats.score);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -52,12 +90,9 @@ export default function ProfilePage() {
       if (!user) return;
       setIsSaving(true);
       
-      // Simulate API call
       setTimeout(() => {
         const updatedUser = { ...user, name, phone, address, city, state };
-        updateUser(updatedUser); // Update context
-        // In a real app, you would also update your backend.
-        // For mock data, we could update the array, but that's complex without a state management library.
+        updateUser(updatedUser); 
         toast({ title: 'Success', description: 'Profile updated successfully.' });
         setIsSaving(false);
       }, 1000);
@@ -67,96 +102,105 @@ export default function ProfilePage() {
 
   if (isLoading || !userProfile) {
      return (
-       <div className="container mx-auto max-w-2xl py-8 px-4">
-         <Card>
-            <CardHeader>
-                 <Skeleton className="h-8 w-1/3" />
-                 <Skeleton className="h-4 w-2/3" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-24 w-full" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                     <div className="space-y-2">
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                </div>
-                <Skeleton className="h-10 w-32" />
-            </CardContent>
-         </Card>
+       <div className="container mx-auto max-w-4xl py-8 px-4">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-96 w-full" />
+            </div>
+            <div className="md:col-span-1">
+                <Skeleton className="h-64 w-full" />
+            </div>
+         </div>
        </div>
     );
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-8 px-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
-          <CardDescription>
-            Update your personal information. Your unique JanSetu ID is <strong>{userProfile.janId}</strong>.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+    <div className="container mx-auto max-w-4xl py-8 px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-3xl font-headline">My Profile</CardTitle>
+                        <CardDescription>
+                            Your unique JanSetu ID is <strong>{userProfile.janId}</strong>.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-4 p-4 rounded-lg bg-secondary">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${contribution.color}`}>
+                                {contribution.icon}
+                            </div>
+                            <div>
+                                <p className="font-bold text-lg">{contribution.level}</p>
+                                <p className="text-sm text-muted-foreground">Contribution Score: {userStats.score}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>My Contributions</CardTitle>
+                        <CardDescription>An overview of your reporting activity.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <ContributionCard title="Total Reports" value={userStats.total} icon={<Files className="h-4 w-4 text-muted-foreground" />} />
+                        <ContributionCard title="Resolved" value={userStats.resolved} icon={<ListChecks className="h-4 w-4 text-muted-foreground" />} />
+                        <ContributionCard title="In Progress" value={userStats.inProgress} icon={<Hourglass className="h-4 w-4 text-muted-foreground" />} />
+                        <ContributionCard title="Rejected" value={userStats.rejected} icon={<ShieldX className="h-4 w-4 text-muted-foreground" />} />
+                    </CardContent>
+                </Card>
             </div>
-             <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" value={userProfile.email} disabled />
+            
+            {/* Sidebar with Profile Form */}
+            <div className="lg:col-span-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Personal Information</CardTitle>
+                         <CardDescription>Keep your details up to date.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Name</Label>
+                            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" value={userProfile.email} disabled />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your phone number" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="dob">Date of Birth</Label>
+                            <Input id="dob" value={userProfile.dob || ''} disabled />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="address">Address</Label>
+                            <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Your full address" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                                <Label htmlFor="city">City</Label>
+                                <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Your city" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="state">State</Label>
+                                <Input id="state" value={state} onChange={(e) => setState(e.target.value)} placeholder="Your state" />
+                            </div>
+                        </div>
+                        <Button onClick={handleSave} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Save Changes
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
-             <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your phone number" />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth</Label>
-                <Input id="dob" value={userProfile.dob || ''} disabled />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Your full address" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Your city" />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="state">State</Label>
-                    <Input id="state" value={state} onChange={(e) => setState(e.target.value)} placeholder="Your state" />
-                </div>
-            </div>
-            <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                Save Changes
-            </Button>
-        </CardContent>
-      </Card>
+        </div>
     </div>
   );
 }

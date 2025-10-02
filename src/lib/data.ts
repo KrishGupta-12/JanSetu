@@ -36,7 +36,8 @@ export const mockCitizens: Citizen[] = [
         dob: '1988-11-01',
         address: '789, Lajpat Nagar',
         city: 'New Delhi',
-        state: 'Delhi'
+        state: 'Delhi',
+        bannedUntil: '2025-01-01T00:00:00Z'
     },
     {
         id: 'user-004',
@@ -60,7 +61,8 @@ export const mockCitizens: Citizen[] = [
         dob: '1991-07-19',
         address: '212, Rohini Sector 9',
         city: 'New Delhi',
-        state: 'Delhi'
+        state: 'Delhi',
+        bannedUntil: 'lifetime'
     },
     {
         id: 'user-006',
@@ -159,6 +161,7 @@ export const mockReports: Report[] = [
     reportDate: new Date('2024-07-18T08:00:00Z').toISOString(),
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
+    urgency: 'Medium',
   },
   {
     id: 'RPT-002',
@@ -172,6 +175,7 @@ export const mockReports: Report[] = [
     status: ReportStatus.InProgress,
     assignedAdminId: 'admin-003',
     assignedAdminName: 'Pothole Dept Head',
+    urgency: 'High',
   },
   {
     id: 'RPT-003',
@@ -185,13 +189,14 @@ export const mockReports: Report[] = [
     status: ReportStatus.Resolved,
     assignedAdminId: 'admin-004',
     assignedAdminName: 'Streetlight Dept Head',
+    urgency: 'Medium',
     resolution: {
       adminId: 'admin-004',
       adminName: 'Streetlight Dept Head',
       date: new Date('2024-07-16T12:00:00Z').toISOString(),
       summary: 'Replaced the faulty bulb and checked the wiring. The streetlight is now fully functional.',
       cost: 500,
-      costBreakdown: 'New LED Bulb: 350, Labor: 150',
+      costBreakdown: 'New LED Bulb: Rs.350, Labor: Rs.150',
       afterImageUrl: 'https://picsum.photos/seed/light-fixed/400/300',
       citizenFeedback: 'Thank you for the quick action! The street feels much safer now.',
       citizenRating: 5,
@@ -211,6 +216,7 @@ export const mockReports: Report[] = [
     reportDate: new Date('2024-07-19T09:15:00Z').toISOString(),
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
+    urgency: 'High',
   },
   {
     id: 'RPT-005',
@@ -224,13 +230,14 @@ export const mockReports: Report[] = [
     status: ReportStatus.PendingApproval,
     assignedAdminId: 'admin-002', // Assume waste handles it
     assignedAdminName: 'Waste Dept Head',
+    urgency: 'Low',
      resolution: {
       adminId: 'admin-002',
       adminName: 'Waste Dept Head',
       date: new Date('2024-07-11T15:00:00Z').toISOString(),
       summary: 'The broken bench has been removed. A new one will be installed next week as per the park maintenance schedule.',
       cost: 1500,
-      costBreakdown: 'Labor for removal: 500, Disposal Fee: 1000',
+      costBreakdown: 'Labor for removal: Rs.500, Disposal Fee: Rs.1000',
       afterImageUrl: 'https://picsum.photos/seed/bench-gone/400/300',
       citizenFeedback: 'Thanks for removing it, but when is the new one coming?',
       citizenRating: 3,
@@ -245,8 +252,9 @@ export const mockReports: Report[] = [
     longitude: 77.1082,
     imageUrl: 'https://picsum.photos/seed/waste2/400/300',
     reportDate: new Date('2024-07-20T10:00:00Z').toISOString(),
-    status: ReportStatus.Pending,
-    assignedAdminName: 'Unassigned',
+    status: ReportStatus.Rejected,
+    assignedAdminName: 'Waste Dept Head',
+    urgency: 'Low',
   },
   {
     id: 'RPT-007',
@@ -260,13 +268,14 @@ export const mockReports: Report[] = [
     status: ReportStatus.PendingCitizenFeedback,
     assignedAdminId: 'admin-003',
     assignedAdminName: 'Pothole Dept Head',
+    urgency: 'Medium',
     resolution: {
       adminId: 'admin-003',
       adminName: 'Pothole Dept Head',
       date: new Date('2024-07-22T10:00:00Z').toISOString(),
       summary: 'Applied temporary patchwork to all potholes. Awaiting budget for permanent resurfacing.',
       cost: 8000,
-      costBreakdown: 'Tar: 5000, Labor: 3000',
+      costBreakdown: 'Tar: Rs.5000, Labor: Rs.3000',
       afterImageUrl: 'https://picsum.photos/seed/pothole-patched/400/300',
     }
   },
@@ -282,6 +291,7 @@ export const mockReports: Report[] = [
     status: ReportStatus.InProgress,
     assignedAdminId: 'admin-004',
     assignedAdminName: 'Streetlight Dept Head',
+    urgency: 'Medium',
   },
    {
     id: 'RPT-009',
@@ -294,6 +304,7 @@ export const mockReports: Report[] = [
     reportDate: new Date('2024-07-22T09:00:00Z').toISOString(),
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
+    urgency: 'High',
   },
   {
     id: 'RPT-010',
@@ -307,6 +318,7 @@ export const mockReports: Report[] = [
     status: ReportStatus.InProgress,
     assignedAdminId: 'admin-003',
     assignedAdminName: 'Pothole Dept Head',
+    urgency: 'High',
   },
    {
     id: 'RPT-011',
@@ -319,6 +331,7 @@ export const mockReports: Report[] = [
     reportDate: new Date('2024-07-22T12:00:00Z').toISOString(),
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
+    urgency: 'Medium',
   },
   {
     id: 'RPT-012',
@@ -332,6 +345,7 @@ export const mockReports: Report[] = [
     status: ReportStatus.Resolved,
     assignedAdminId: 'admin-002',
     assignedAdminName: 'Waste Dept Head',
+    urgency: 'Low',
      resolution: {
       adminId: 'admin-002',
       adminName: 'Waste Dept Head',
@@ -356,9 +370,10 @@ export const mockReports: Report[] = [
     longitude: 77.2115,
     imageUrl: '',
     reportDate: new Date('2024-07-14T19:30:00Z').toISOString(),
-    status: ReportStatus.Resolved,
+    status: ReportStatus.Rejected,
     assignedAdminId: 'admin-004',
     assignedAdminName: 'Streetlight Dept Head',
+    urgency: 'Low',
   },
   {
     id: 'RPT-014',
@@ -372,6 +387,7 @@ export const mockReports: Report[] = [
     status: ReportStatus.InProgress,
     assignedAdminId: 'admin-005',
     assignedAdminName: 'Water Dept Head',
+    urgency: 'Critical',
   },
    {
     id: 'RPT-015',
@@ -384,7 +400,22 @@ export const mockReports: Report[] = [
     reportDate: new Date('2024-07-22T14:00:00Z').toISOString(),
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
+    urgency: 'Critical',
   },
+  ...[...Array(5)].map((_, i) => ({
+    id: `RPT-FAKE-${i+1}`,
+    citizenId: 'user-005',
+    category: ReportCategory.Other,
+    description: `This is false report #${i+1} to trigger the ban system.`,
+    latitude: 28.6 + i * 0.01,
+    longitude: 77.2 + i * 0.01,
+    imageUrl: '',
+    reportDate: new Date(`2024-07-01T10:00:${i < 10 ? '0' : ''}${i}Z`).toISOString(),
+    status: ReportStatus.Rejected,
+    assignedAdminId: 'admin-001',
+    assignedAdminName: 'Super Admin',
+    urgency: 'Low',
+  } as Report)),
 ];
 
 export const mockAqiSensors: AqiSensor[] = [
