@@ -5,8 +5,8 @@ import { moderateImage } from '@/ai/flows/image-moderation';
 import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { classifyReport } from '@/ai/flows/classify-report';
 import { ReportCategory } from './types';
-import { initializeFirebase } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { initializeAdminApp } from '@/firebase/server-init';
+import { collection, addDoc, query, getDocs } from 'firebase/firestore';
 import { Report } from './types';
 
 const reportSchema = z.object({
@@ -43,7 +43,7 @@ export async function submitReport(
   }
 
   const { photo, description, citizenId, latitude, longitude } = validatedFields.data;
-  const { firestore } = initializeFirebase();
+  const { firestore } = await initializeAdminApp();
 
   try {
     let moderatedPhotoDataUri: string | undefined = undefined;
@@ -87,7 +87,7 @@ export async function submitReport(
 
 export async function summarizeAllReports(): Promise<{ summary: string } | { error: string }> {
   try {
-    const { firestore } = initializeFirebase();
+    const { firestore } = await initializeAdminApp();
     const reportsCollection = collection(firestore, 'issueReports');
     const q = query(reportsCollection);
     const querySnapshot = await getDocs(q);
