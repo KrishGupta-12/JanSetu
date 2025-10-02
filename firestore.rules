@@ -1,104 +1,98 @@
 /**
- * @fileoverview Firestore Security Rules for the Citizen Issue Reporting application.
+ * @fileoverview Firestore Security Rules for Citizen Engagement Platform.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and allows public read access to issue reports.
- * Administrative access is controlled via an `/admins/{email}` collection.
+ * This ruleset employs a strict user-ownership model for user profiles.
+ * Issue reports are publicly readable but writable only by their creators.
+ * Administrative access is managed via a separate collection and role-based checks.
  *
  * Data Structure:
- * - `/users/{userId}`: Stores public profile data for each user, secured with owner-only access.
- * - `/issueReports/{reportId}`: Stores issue reports, publicly readable but writable only with proper authorization (owner-only).
- * - `/admins/{email}`: Stores admin credentials, not directly exposed to client-side access.
+ * - /users/{userId}: Stores user profiles, with the userId matching the Firebase Auth UID.
+ * - /issueReports/{reportId}: Stores issue reports submitted by citizens.
+ * - /admins/{email}: Stores admin credentials, keyed by email, defining their roles and departments.
  *
  * Key Security Decisions:
  * - Users can only read and write their own profile data.
- * - Issue reports are publicly readable, but creating, updating, or deleting requires ownership.
- * - The rules do NOT currently enforce any data validation beyond authorization checks. This is for prototyping purposes.
- * - Listing of users is denied to prevent data scraping.
+ * - Issue reports are publicly readable, enabling broad access for citizens and admins.
+ * - Only authenticated users can create issue reports.
+ * - Only the user who created an issue report can update or delete it.
+ * - Listing of all users is disallowed.
  *
  * Denormalization for Authorization:
- * - The `issueReports` collection requires a `citizenId` field to match the authenticated user's `uid` for write operations.
+ *  None used.
+ *
+ * Structural Segregation:
+ *  Private user data (profiles) is stored under /users/{userId}, while public issue reports are stored in a top-level collection.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is authenticated.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     * @param {string} userId - The user ID to compare against the authenticated user's UID.
-     * @return {boolean} True if the user is signed in and the UIDs match.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of an existing document.
-     *              This combines the ownership check with a document existence check.
-     * @param {string} userId - The user ID to compare against the authenticated user's UID.
-     * @return {boolean} True if the user is signed in, the UIDs match, and the document exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Defines the user profiles.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user123' creates their profile document with matching userId.
-     * @allow (get) User with UID 'user123' reads their profile document.
-     * @allow (update) User with UID 'user123' updates their profile document.
-     * @allow (delete) User with UID 'user123' deletes their profile document.
-     * @deny (create) User with UID 'user123' tries to create a profile for userId 'user456'.
-     * @deny (get) User with UID 'user123' tries to read the profile of userId 'user456'.
-     * @deny (update) User with UID 'user123' tries to update the profile of userId 'user456'.
-     * @deny (delete) User with UID 'user123' tries to delete the profile of userId 'user456'.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User with matching UID can create their profile.
+     * @allow (get, update, delete) User with matching UID can read, update, and delete their profile.
+     * @deny (create) User cannot create a profile with a mismatched UID.
+     * @deny (get, update, delete) User cannot read, update, or delete another user's profile.
+     * @deny (list) Listing all users is not allowed.
+     * @principle Enforces document ownership for user profiles.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(resource);
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Defines the issue reports.
+     * @description Controls access to issue reports.
      * @path /issueReports/{reportId}
-     * @allow (get) Any user can read an issue report.
-     * @allow (list) Any user can list issue reports.
-     * @allow (create) User with UID 'user123' creates an issue report with citizenId 'user123'.
-     * @allow (update) User with UID 'user123' updates an issue report they own (citizenId 'user123').
-     * @allow (delete) User with UID 'user123' deletes an issue report they own (citizenId 'user123').
-     * @deny (create) User with UID 'user123' tries to create an issue report with citizenId 'user456'.
-     * @deny (update) User with UID 'user123' tries to update an issue report owned by 'user456'.
-     * @deny (delete) User with UID 'user123' tries to delete an issue report owned by 'user456'.
-     * @principle Allows public reads but enforces document ownership for writes.
+     * @allow (get, list) Anyone can read issue reports.
+     * @allow (create) Authenticated users can create issue reports, with citizenId matching their UID.
+     * @allow (update, delete) Only the user who created the report can update or delete it.
+     * @deny (create) Unauthenticated users cannot create issue reports.
+     * @deny (update, delete) Users cannot update or delete issue reports they didn't create.
+     * @principle Public read access with owner-only writes.
      */
     match /issueReports/{reportId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isReportOwner() {
+        return request.auth.uid == resource.data.citizenId;
+      }
+
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.citizenId);
-      allow delete: if isExistingOwner(resource.data.citizenId);
+      allow update: if isSignedIn() && isReportOwner();
+      allow delete: if isSignedIn() && isReportOwner();
     }
+
     /**
-     * @description Defines the admin credentials, not directly accessible from client.
+     * @description Controls access to administrator credentials.
      * @path /admins/{email}
-     * @allow (get) Never allowed.
-     * @allow (list) Never allowed.
-     * @allow (create) Never allowed.
-     * @allow (update) Never allowed.
-     * @allow (delete) Never allowed.
-     * @principle Denies all access to admin credentials from client applications. These rules should only be updated server side.
+     * @deny get: if false; // Listing all admins is not allowed.
+     * @deny list: if false; // Listing all admins is not allowed.
+     * @deny create: if false;
+     * @deny update: if false;
+     * @deny delete: if false;
+     * @principle Restricts access to administrator credentials.
      */
     match /admins/{email} {
       allow get: if false;
