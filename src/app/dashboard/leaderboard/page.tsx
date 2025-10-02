@@ -4,12 +4,13 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserProfile, LeaderboardEntry, LeaderboardDocument } from '@/lib/types';
+import { UserProfile, LeaderboardEntry } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { UserRole } from '@/lib/types';
 
 const getContributionLevel = (score: number) => {
     if (score >= 50) return { level: 'Platinum', color: 'text-blue-500', icon: <Award /> };
@@ -58,14 +59,22 @@ function LeaderboardSkeleton() {
 export default function LeaderboardPage() {
     const { user, firestore } = useAuth();
 
-    const leaderboardDocRef = useMemoFirebase(() => {
+    const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return doc(firestore, 'leaderboard', 'top_contributors');
+        return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
     }, [firestore]);
 
-    const { data: leaderboardDoc, isLoading } = useDoc<LeaderboardDocument>(leaderboardDocRef);
+    const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
     
-    const leaderboardData = leaderboardDoc?.users || [];
+    const leaderboardData = useMemo(() => {
+        if (!users) return [];
+        
+        return users.map(u => ({
+            ...u,
+            score: (u.resolvedReports * 5) + u.totalReports,
+        })).sort((a, b) => b.score - a.score);
+
+    }, [users]);
 
     const userRank = useMemo(() => {
         if (!leaderboardData || !user) return null;
@@ -104,7 +113,7 @@ export default function LeaderboardPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Top Contributors</CardTitle>
-                    <CardDescription>Ranking is based on the number and impact of reports submitted. Updated regularly.</CardDescription>
+                    <CardDescription>Ranking is based on the number and impact of reports submitted. Updated in real-time.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border">
