@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, UserCog, Files, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, UserCog, Files, Megaphone, Users2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,7 @@ const allMenuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
   { href: '/admin/reports', label: 'Reports', icon: Files, roles: [UserRole.SuperAdmin]},
   { href: '/admin/my-department', label: 'My Department', icon: Building, roles: DepartmentAdminRoles },
+  { href: '/admin/my-team', label: 'My Team', icon: Users2, roles: DepartmentAdminRoles },
   { href: '/admin/users', label: 'Users', icon: Users, roles: [UserRole.SuperAdmin] },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart, roles: [UserRole.SuperAdmin] },
   { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
