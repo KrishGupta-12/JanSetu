@@ -1,98 +1,59 @@
 /**
- * @fileOverview Firestore Security Rules for the JanSetu application.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and issue reports,
- * ensuring that only the authenticated user can create, read, update, or delete their own data.
- * Air quality sensors and disaster alerts are publicly readable.
- *
- * Data Structure:
- * - User profiles are stored under `/users/{userId}/userProfile/{userProfileId}`.
- * - Issue reports are stored under `/users/{userId}/issueReports/{issueReportId}`.
- * - Air quality sensor data is stored under `/airQualitySensors/{airQualitySensorId}`.
- * - Disaster alerts are stored under `/disasterAlerts/{disasterAlertId}`.
- *
- * Key Security Decisions:
- * - Users can only manage their own profiles and issue reports.
- * - Air quality sensor data and disaster alerts are publicly readable.
- * - Relational integrity is enforced between user IDs in the path and within the document data.
- *
- * Denormalization for Authorization:
- * The `userProfileId` in `/users/{userId}/userProfile/{userProfileId}` must match the `userId` path parameter for creates.
+ * @file Firestore Security Rules for JanSetu Application
+ * @corePhilosophy This ruleset enforces a strict user-ownership model for user profiles and issue reports,
+ *  while allowing public read access to air quality sensors and disaster alerts.
+ * @dataStructure User-specific data is nested under /users/{userId}. Public data resides in top-level collections.
+ * @keySecurityDecisions
+ *   - User listing is disallowed.
+ *   - Ownership is enforced via path-based checks and denormalized data.
+ *   - Public read access is granted to /airQualitySensors and /disasterAlerts.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for user profiles stored under /users/{userId}/userProfile/{userProfileId}.
+     * @description Enforces owner-only access to user profile information.
      * @path /users/{userId}/userProfile/{userProfileId}
-     * @allow (create) - Authenticated user with UID 'user123' can create a profile at /users/user123/userProfile/user123. The request.resource.data.id must be equal to request.auth.uid.
-     * @allow (get, list, update, delete) - Authenticated user with UID 'user123' can get, list, update or delete the profile at /users/user123/userProfile/user123.
-     * @deny (create) - Authenticated user with UID 'user456' cannot create a profile at /users/user123/userProfile/user123.
-     * @deny (get, list, update, delete) - Authenticated user with UID 'user456' cannot get, list, update, or delete the profile at /users/user123/userProfile/user123.
-     * @principle Enforces document ownership and relational integrity.
+     * @allow (create) Signed-in user creates their own profile with matching userId and userProfileId.
+     * @allow (get, update, delete) Signed-in user retrieves, updates, or deletes their own profile.
+     * @deny (create) Signed-in user attempts to create a profile for another user.
+     * @deny (get, update, delete) Signed-in user attempts to retrieve, update, or delete another user's profile.
+     * @principle Enforces document ownership for all operations. Validates path consistency.
      */
     match /users/{userId}/userProfile/{userProfileId} {
-      // Helper function to check if the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
+      // Verify user is signed in
+      allow read: if isSignedIn() && isOwner(userId);
+      allow list: if false;
 
-      // Helper function to check if the user is the owner of the document
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      // Helper function to check if the user is an existing owner of the document
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isSelfCreate(userId, request.resource.data.id) && isUserProfileIdMatchesUserId(userId, userProfileId);
+      allow update: if isSignedIn() && isExistingOwner(userId) && isUserProfileIdMatchesUserId(userId, userProfileId);
+      allow delete: if isSignedIn() && isExistingOwner(userId) && isUserProfileIdMatchesUserId(userId, userProfileId);
     }
 
     /**
-     * @description Enforces user-ownership for issue reports stored under /users/{userId}/issueReports/{issueReportId}.
+     * @description Enforces owner-only access to issue reports created by a user.
      * @path /users/{userId}/issueReports/{issueReportId}
-     * @allow (create) - Authenticated user with UID 'user123' can create a report at /users/user123/issueReports/report456.
-     * @allow (get, list, update, delete) - Authenticated user with UID 'user123' can get, list, update or delete the report at /users/user123/issueReports/report456.
-     * @deny (create) - Authenticated user with UID 'user456' cannot create a report at /users/user123/issueReports/report789.
-     * @deny (get, list, update, delete) - Authenticated user with UID 'user456' cannot get, list, update, or delete the report at /users/user123/issueReports/report789.
-     * @principle Enforces document ownership.
+     * @allow (create) Signed-in user creates an issue report under their user ID.
+     * @allow (get, list, update, delete) Signed-in user retrieves, lists, updates, or deletes their own issue reports.
+     * @deny (create) Signed-in user attempts to create an issue report for another user.
+     * @deny (get, list, update, delete) Signed-in user attempts to retrieve, list, update, or delete another user's issue reports.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/issueReports/{issueReportId} {
-      // Helper function to check if the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Helper function to check if the user is the owner of the document
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      // Helper function to check if the user is an existing owner of the document
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow read: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidIssueReport(request);
+      allow update: if isSignedIn() && isExistingOwner(userId) && isIssueReportCreatorImmutable(userId, resource.data.userProfileId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Allows public read access to air quality sensor data.
+     * @description Allows public read access to air quality sensor data, but restricts writes.
      * @path /airQualitySensors/{airQualitySensorId}
-     * @allow (get, list) - Any user (signed in or not) can read air quality sensor data.
-     * @deny (create, update, delete) - No one can create, update, or delete air quality sensor data.
-     * @principle Allows public read access.
+     * @allow (get, list) Any user can read air quality sensor data.
+     * @deny (create, update, delete) No user can create, update, or delete air quality sensor data.
+     * @principle Public read, restricted write access.
      */
     match /airQualitySensors/{airQualitySensorId} {
       allow get, list: if true;
@@ -100,15 +61,52 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows public read access to disaster alerts.
+     * @description Allows public read access to disaster alerts, but restricts writes.
      * @path /disasterAlerts/{disasterAlertId}
-     * @allow (get, list) - Any user (signed in or not) can read disaster alerts.
-     * @deny (create, update, delete) - No one can create, update, or delete disaster alerts.
-     * @principle Allows public read access.
+     * @allow (get, list) Any user can read disaster alerts.
+     * @deny (create, update, delete) No user can create, update, or delete disaster alerts.
+     * @principle Public read, restricted write access.
      */
     match /disasterAlerts/{disasterAlertId} {
       allow get, list: if true;
       allow create, update, delete: if false;
+    }
+
+    // --- Helper Functions ---
+
+    // Verifies that the user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Checks if the request comes from the owner of the document.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Checks if the request comes from the owner of the document, and the document exists.
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // Verifies the user is creating their own document and that the UserProfile id matches the user id
+    function isSelfCreate(userId, profileId) {
+        return request.auth.uid == userId && userId == profileId;
+    }
+
+    // Checks if the userProfileId matches the userId in the path
+    function isUserProfileIdMatchesUserId(userId, userProfileId) {
+        return userId == userProfileId;
+    }
+
+    // Validation for issue reports to ensure the request is valid
+    function isValidIssueReport(request) {
+      return request.resource.data.userProfileId == request.auth.uid;
+    }
+
+    // Validates that the issueReport Creator ID is immutable on update.
+    function isIssueReportCreatorImmutable(userId, creatorId) {
+        return userId == creatorId;
     }
   }
 }
