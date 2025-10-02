@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
@@ -82,8 +83,8 @@ export default function ProfilePage() {
           setName(user.name || '');
           setPhone(user.phone || '');
           setAddress(user.address || '');
-          setCity(user.city || '');
-          setState(user.state || '');
+          setCity(user.city || 'Chandigarh');
+          setState(user.state || 'Chandigarh');
       }
   }, [user]);
 

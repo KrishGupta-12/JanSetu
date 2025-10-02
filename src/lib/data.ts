@@ -1,3 +1,4 @@
+
 import type { Report, AqiSensor, Citizen, Admin } from './types';
 import { ReportCategory, ReportStatus, AdminRole } from './types';
 
@@ -10,9 +11,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9876543210',
         dateJoined: '2024-07-01T10:00:00Z',
         dob: '1990-05-15',
-        address: '123, MG Road, Saket',
-        city: 'New Delhi',
-        state: 'Delhi'
+        address: 'House No. 123, Sector 17',
+        city: 'Chandigarh',
+        state: 'Chandigarh'
     },
     {
         id: 'user-002',
@@ -22,9 +23,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9876543211',
         dateJoined: '2024-07-05T11:30:00Z',
         dob: '1992-08-22',
-        address: '456, GK-1, Greater Kailash',
-        city: 'New Delhi',
-        state: 'Delhi'
+        address: 'House No. 456, Sector 22',
+        city: 'Chandigarh',
+        state: 'Chandigarh'
     },
     {
         id: 'user-003',
@@ -34,9 +35,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9123456780',
         dateJoined: '2024-06-15T09:00:00Z',
         dob: '1988-11-01',
-        address: '789, Lajpat Nagar',
-        city: 'New Delhi',
-        state: 'Delhi',
+        address: 'House No. 789, Sector 35',
+        city: 'Chandigarh',
+        state: 'Chandigarh',
         bannedUntil: '2025-01-01T00:00:00Z'
     },
     {
@@ -47,9 +48,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9988776655',
         dateJoined: '2024-07-10T15:20:00Z',
         dob: '1995-02-10',
-        address: '101, Vasant Kunj',
-        city: 'New Delhi',
-        state: 'Delhi'
+        address: 'House No. 101, Sector 8',
+        city: 'Chandigarh',
+        state: 'Chandigarh'
     },
     {
         id: 'user-005',
@@ -59,9 +60,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9001223344',
         dateJoined: '2024-05-20T18:00:00Z',
         dob: '1991-07-19',
-        address: '212, Rohini Sector 9',
-        city: 'New Delhi',
-        state: 'Delhi',
+        address: 'House No. 212, Sector 45',
+        city: 'Chandigarh',
+        state: 'Chandigarh',
         bannedUntil: 'lifetime'
     },
     {
@@ -72,9 +73,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9555666777',
         dateJoined: '2024-07-12T12:00:00Z',
         dob: '1993-09-05',
-        address: '333, Hauz Khas Village',
-        city: 'New Delhi',
-        state: 'Delhi'
+        address: 'House No. 333, Sector 9',
+        city: 'Chandigarh',
+        state: 'Chandigarh'
     },
     {
         id: 'user-007',
@@ -84,9 +85,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9444333222',
         dateJoined: '2024-07-18T10:30:00Z',
         dob: '1985-03-30',
-        address: '555, Karol Bagh',
-        city: 'New Delhi',
-        state: 'Delhi'
+        address: 'House No. 555, Sector 11',
+        city: 'Chandigarh',
+        state: 'Chandigarh'
     },
     {
         id: 'user-008',
@@ -96,9 +97,9 @@ export const mockCitizens: Citizen[] = [
         phone: '9666777888',
         dateJoined: '2024-07-20T11:00:00Z',
         dob: '1996-12-12',
-        address: '888, Connaught Place',
-        city: 'New Delhi',
-        state: 'Delhi'
+        address: 'House No. 888, Sector 15',
+        city: 'Chandigarh',
+        state: 'Chandigarh'
     }
 ];
 
@@ -154,9 +155,9 @@ export const mockReports: Report[] = [
     id: 'RPT-001',
     citizenId: 'user-001',
     category: ReportCategory.Waste,
-    description: 'Large pile of garbage overflowing from the public bin near Saket metro station. It has been there for 3 days.',
-    latitude: 28.5246,
-    longitude: 77.2012,
+    description: 'Large pile of garbage overflowing from the public bin near Sector 17 plaza. It has been there for 3 days.',
+    latitude: 30.7352,
+    longitude: 76.7826,
     imageUrl: 'https://picsum.photos/seed/waste1/400/300',
     reportDate: new Date('2024-07-18T08:00:00Z').toISOString(),
     status: ReportStatus.Pending,
@@ -169,9 +170,9 @@ export const mockReports: Report[] = [
     id: 'RPT-002',
     citizenId: 'user-002',
     category: ReportCategory.Pothole,
-    description: 'Deep pothole on the main road in GK-1 M-Block market causing traffic issues. Very dangerous for two-wheelers.',
-    latitude: 28.5488,
-    longitude: 77.2383,
+    description: 'Deep pothole on the Jan Marg road causing traffic issues. Very dangerous for two-wheelers.',
+    latitude: 30.7415,
+    longitude: 76.7824,
     imageUrl: 'https://picsum.photos/seed/pothole1/400/300',
     reportDate: new Date('2024-07-17T14:30:00Z').toISOString(),
     status: ReportStatus.InProgress,
@@ -185,9 +186,9 @@ export const mockReports: Report[] = [
     id: 'RPT-003',
     citizenId: 'user-001',
     category: ReportCategory.Streetlight,
-    description: 'The streetlight at the corner of Nehru Place is not working. It is very dark at night and feels unsafe.',
-    latitude: 28.5492,
-    longitude: 77.2510,
+    description: 'The streetlight at the corner of the Rose Garden parking is not working. It is very dark at night.',
+    latitude: 30.7423,
+    longitude: 76.7942,
     imageUrl: '',
     reportDate: new Date('2024-07-15T20:00:00Z').toISOString(),
     status: ReportStatus.Resolved,
@@ -215,9 +216,9 @@ export const mockReports: Report[] = [
     id: 'RPT-004',
     citizenId: 'user-003',
     category: ReportCategory.Water,
-    description: 'Severe water logging after the rain yesterday near ITO crossing. The road is completely submerged.',
-    latitude: 28.6315,
-    longitude: 77.2482,
+    description: 'Severe water logging after the rain yesterday near Sukhna Lake path. The path is completely submerged.',
+    latitude: 30.7422,
+    longitude: 76.8188,
     imageUrl: 'https://picsum.photos/seed/water1/400/300',
     reportDate: new Date('2024-07-19T09:15:00Z').toISOString(),
     status: ReportStatus.Pending,
@@ -230,9 +231,9 @@ export const mockReports: Report[] = [
     id: 'RPT-005',
     citizenId: 'user-004',
     category: ReportCategory.Other,
-    description: 'Broken public bench in Lodhi Garden. Needs immediate repair.',
-    latitude: 28.5932,
-    longitude: 77.2225,
+    description: 'Broken public bench in the Rock Garden. Needs immediate repair.',
+    latitude: 30.7526,
+    longitude: 76.8099,
     imageUrl: '',
     reportDate: new Date('2024-07-10T11:00:00Z').toISOString(),
     status: ReportStatus.PendingApproval,
@@ -257,9 +258,9 @@ export const mockReports: Report[] = [
     id: 'RPT-006',
     citizenId: 'user-005',
     category: ReportCategory.Waste,
-    description: 'Construction debris dumped on the side of the road in Rohini Sector 9.',
-    latitude: 28.7181,
-    longitude: 77.1082,
+    description: 'Construction debris dumped on the side of the road in Sector 45.',
+    latitude: 30.7063,
+    longitude: 76.7686,
     imageUrl: 'https://picsum.photos/seed/waste2/400/300',
     reportDate: new Date('2024-07-20T10:00:00Z').toISOString(),
     status: ReportStatus.Rejected,
@@ -272,9 +273,9 @@ export const mockReports: Report[] = [
     id: 'RPT-007',
     citizenId: 'user-006',
     category: ReportCategory.Pothole,
-    description: 'Multiple small potholes on the road leading to Hauz Khas Village.',
-    latitude: 28.5535,
-    longitude: 77.1943,
+    description: 'Multiple small potholes on the road leading to Elante Mall.',
+    latitude: 30.7056,
+    longitude: 76.7997,
     imageUrl: 'https://picsum.photos/seed/pothole2/400/300',
     reportDate: new Date('2024-07-21T11:20:00Z').toISOString(),
     status: ReportStatus.PendingCitizenFeedback,
@@ -297,9 +298,9 @@ export const mockReports: Report[] = [
     id: 'RPT-008',
     citizenId: 'user-007',
     category: ReportCategory.Streetlight,
-    description: 'Streetlight flickering continuously on the main road of Karol Bagh market.',
-    latitude: 28.6507,
-    longitude: 77.1911,
+    description: 'Streetlight flickering continuously on the main road of Sector 11 market.',
+    latitude: 30.7583,
+    longitude: 76.7824,
     imageUrl: '',
     reportDate: new Date('2024-07-19T22:00:00Z').toISOString(),
     status: ReportStatus.InProgress,
@@ -313,9 +314,9 @@ export const mockReports: Report[] = [
     id: 'RPT-009',
     citizenId: 'user-008',
     category: ReportCategory.Water,
-    description: 'Leaking water pipeline near Connaught Place, inner circle.',
-    latitude: 28.6328,
-    longitude: 77.2196,
+    description: 'Leaking water pipeline near Sector 15 market.',
+    latitude: 30.7483,
+    longitude: 76.7808,
     imageUrl: 'https://picsum.photos/seed/water2/400/300',
     reportDate: new Date('2024-07-22T09:00:00Z').toISOString(),
     status: ReportStatus.Pending,
@@ -328,9 +329,9 @@ export const mockReports: Report[] = [
     id: 'RPT-010',
     citizenId: 'user-001',
     category: ReportCategory.Pothole,
-    description: 'The road surface has worn off completely near Chanakyapuri.',
-    latitude: 28.5973,
-    longitude: 77.1829,
+    description: 'The road surface has worn off completely near Sector 10.',
+    latitude: 30.7461,
+    longitude: 76.7813,
     imageUrl: 'https://picsum.photos/seed/pothole3/400/300',
     reportDate: new Date('2024-07-21T18:00:00Z').toISOString(),
     status: ReportStatus.InProgress,
@@ -344,9 +345,9 @@ export const mockReports: Report[] = [
     id: 'RPT-011',
     citizenId: 'user-002',
     category: ReportCategory.Waste,
-    description: 'Garbage not collected for a week in our lane in Vasant Vihar.',
-    latitude: 28.5630,
-    longitude: 77.1636,
+    description: 'Garbage not collected for a week in our lane in Sector 40.',
+    latitude: 30.7391,
+    longitude: 76.7516,
     imageUrl: 'https://picsum.photos/seed/waste3/400/300',
     reportDate: new Date('2024-07-22T12:00:00Z').toISOString(),
     status: ReportStatus.Pending,
@@ -359,9 +360,9 @@ export const mockReports: Report[] = [
     id: 'RPT-012',
     citizenId: 'user-003',
     category: ReportCategory.Other,
-    description: 'Stray dogs have become a menace in the neighborhood park in Dwarka.',
-    latitude: 28.6183,
-    longitude: 77.0326,
+    description: 'Stray dogs have become a menace in the neighborhood park in Sector 21.',
+    latitude: 30.7308,
+    longitude: 76.7909,
     imageUrl: '',
     reportDate: new Date('2024-07-16T17:45:00Z').toISOString(),
     status: ReportStatus.Resolved,
@@ -389,9 +390,9 @@ export const mockReports: Report[] = [
     id: 'RPT-013',
     citizenId: 'user-004',
     category: ReportCategory.Streetlight,
-    description: 'Need a new streetlight installed in a dark alley in Malviya Nagar.',
-    latitude: 28.5348,
-    longitude: 77.2115,
+    description: 'Need a new streetlight installed in a dark alley in Sector 7.',
+    latitude: 30.7360,
+    longitude: 76.8021,
     imageUrl: '',
     reportDate: new Date('2024-07-14T19:30:00Z').toISOString(),
     status: ReportStatus.Rejected,
@@ -405,9 +406,9 @@ export const mockReports: Report[] = [
     id: 'RPT-014',
     citizenId: 'user-005',
     category: ReportCategory.Water,
-    description: 'Main water supply pipe burst, flooding the street in Patel Nagar.',
-    latitude: 28.6468,
-    longitude: 77.1720,
+    description: 'Main water supply pipe burst, flooding the street in Sector 34.',
+    latitude: 30.7253,
+    longitude: 76.7725,
     imageUrl: 'https://picsum.photos/seed/water3/400/300',
     reportDate: new Date('2024-07-22T06:00:00Z').toISOString(),
     status: ReportStatus.InProgress,
@@ -421,9 +422,9 @@ export const mockReports: Report[] = [
     id: 'RPT-015',
     citizenId: 'user-006',
     category: ReportCategory.Pothole,
-    description: 'Road cave-in near India Gate circle. Major traffic hazard.',
-    latitude: 28.6129,
-    longitude: 77.2295,
+    description: 'Road cave-in near Sector 17 market. Major traffic hazard.',
+    latitude: 30.7335,
+    longitude: 76.7821,
     imageUrl: 'https://picsum.photos/seed/pothole4/400/300',
     reportDate: new Date('2024-07-22T14:00:00Z').toISOString(),
     status: ReportStatus.Pending,
@@ -437,8 +438,8 @@ export const mockReports: Report[] = [
     citizenId: 'user-005',
     category: ReportCategory.Other,
     description: `This is false report #${i+1} to trigger the ban system.`,
-    latitude: 28.6 + i * 0.01,
-    longitude: 77.2 + i * 0.01,
+    latitude: 30.7 + i * 0.01,
+    longitude: 76.7 + i * 0.01,
     imageUrl: '',
     reportDate: new Date(`2024-07-01T10:00:${i < 10 ? '0' : ''}${i}Z`).toISOString(),
     status: ReportStatus.Rejected,
@@ -453,39 +454,39 @@ export const mockReports: Report[] = [
 export const mockAqiSensors: AqiSensor[] = [
   {
     id: 'AQI-01',
-    location: { lat: 28.6139, lng: 77.2090 }, // India Gate
+    location: { lat: 30.7333, lng: 76.7794 }, // Sector 17
     aqi: 158,
-    name: 'Central Delhi Sensor',
+    name: 'Central Chandigarh Sensor',
   },
   {
     id: 'AQI-02',
-    location: { lat: 28.5488, lng: 77.2383 }, // GK-1
+    location: { lat: 30.7179, lng: 76.7448 }, // Sector 43
     aqi: 95,
-    name: 'South Delhi Sensor',
+    name: 'South Chandigarh Sensor',
   },
   {
     id: 'AQI-03',
-    location: { lat: 28.6562, lng: 77.2410 }, // Chandni Chowk
+    location: { lat: 30.7526, lng: 76.8099 }, // Rock Garden
     aqi: 210,
-    name: 'Old Delhi Sensor',
+    name: 'North Chandigarh Sensor',
   },
   {
     id: 'AQI-04',
-    location: { lat: 28.7041, lng: 77.1025 }, // Rohini
+    location: { lat: 30.7410, lng: 76.7900 }, // Panjab University
     aqi: 180,
-    name: 'North West Delhi Sensor',
+    name: 'West Chandigarh Sensor',
   },
   {
     id: 'AQI-05',
-    location: { lat: 28.6183, lng: 77.0326 }, // Dwarka
+    location: { lat: 30.7056, lng: 76.7997 }, // Elante Mall
     aqi: 165,
-    name: 'West Delhi Sensor',
+    name: 'Industrial Area Sensor',
   },
   {
     id: 'AQI-06',
-    location: { lat: 28.5276, lng: 77.2828 }, // Noida Border
-    aqi: 230,
-    name: 'East Delhi Sensor',
+    location: { lat: 30.7422, lng: 76.8188 }, // Sukhna Lake
+    aqi: 120,
+    name: 'East Chandigarh Sensor',
   },
 ];
 

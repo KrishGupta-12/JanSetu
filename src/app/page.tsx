@@ -56,12 +56,12 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative w-full h-[70vh] flex items-center justify-center text-center bg-cover bg-center pt-16">
          <Image
-            src="https://picsum.photos/seed/hero/1800/1200"
+            src="https://picsum.photos/seed/chandigarh/1800/1200"
             alt="Cityscape"
             fill
             className="object-cover"
             priority
-            data-ai-hint="cityscape modern"
+            data-ai-hint="Chandigarh modern city"
           />
         <div className="absolute inset-0 bg-black/60" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-white">
@@ -73,7 +73,7 @@ export default function LandingPage() {
             <p className="text-sm text-slate-300 italic">("Service to the people is the highest duty")</p>
           </div>
           <p className="text-lg md:text-xl text-slate-200 mb-8">
-            JanSetu is a platform for civic engagement. Report issues, monitor your environment, and contribute to a smarter, cleaner, and safer city.
+            JanSetu is a platform for civic engagement. Report issues, monitor your environment, and contribute to a smarter, cleaner, and safer Chandigarh.
           </p>
           <Button size="lg" asChild>
             <Link href="/signup">Get Started <ArrowRight className="ml-2 h-5 w-5" /></Link>

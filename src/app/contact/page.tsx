@@ -36,7 +36,7 @@ export default function ContactUsPage() {
               <h3 className="text-lg font-semibold">General Inquiries</h3>
               <p className="text-muted-foreground text-sm flex-1 mb-4">For questions about the JanSetu initiative, partnerships, or media requests.</p>
               <Button asChild variant="outline">
-                <a href="mailto:info@jansetu.gov.in">info@jansetu.gov.in</a>
+                <a href="mailto:info@jansetu-chandigarh.gov.in">info@jansetu-chandigarh.gov.in</a>
               </Button>
             </Card>
 
@@ -45,7 +45,7 @@ export default function ContactUsPage() {
               <h3 className="text-lg font-semibold">Report Follow-up</h3>
               <p className="text-muted-foreground text-sm flex-1 mb-4">For questions about a specific report you've submitted or its status.</p>
               <Button asChild variant="outline">
-                <a href="mailto:support@jansetu.gov.in">support@jansetu.gov.in</a>
+                <a href="mailto:support@jansetu-chandigarh.gov.in">support@jansetu-chandigarh.gov.in</a>
               </Button>
             </Card>
 
@@ -54,7 +54,7 @@ export default function ContactUsPage() {
               <h3 className="text-lg font-semibold">Technical Support</h3>
               <p className="text-muted-foreground text-sm flex-1 mb-4">If you are experiencing technical difficulties with the app or website.</p>
               <Button asChild variant="outline">
-                <a href="mailto:tech@jansetu.gov.in">tech@jansetu.gov.in</a>
+                <a href="mailto:tech@jansetu-chandigarh.gov.in">tech@jansetu-chandigarh.gov.in</a>
               </Button>
             </Card>
 
@@ -63,8 +63,8 @@ export default function ContactUsPage() {
             <div className="flex flex-col items-center border-t pt-8">
                 <MapPin className="h-10 w-10 text-primary mb-4" />
                 <h3 className="text-lg font-semibold">Head Office</h3>
-                <p className="text-muted-foreground">Ministry of Urban Development</p>
-                <p className="text-muted-foreground">Pragati Maidan, New Delhi, India</p>
+                <p className="text-muted-foreground">Municipal Corporation Chandigarh</p>
+                <p className="text-muted-foreground">Sector 17, Chandigarh, India</p>
             </div>
            </CardContent>
         </Card>

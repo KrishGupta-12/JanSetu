@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
@@ -54,7 +55,7 @@ const getPinProps = (report: Report) => {
 }
 
 const MapView = ({ reports }: { reports?: Report[] }) => {
-  const defaultCenter = { lat: 28.6139, lng: 77.209 };
+  const defaultCenter = { lat: 30.7333, lng: 76.7794 };
 
   return (
     <Map
