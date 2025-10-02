@@ -26,11 +26,12 @@ export default function MakeSuperAdminPage() {
     setStatus('loading');
     try {
       const superAdminRef = doc(firestore, 'superAdmins', user.uid);
+      // The data being set is simple, just to mark the document's existence.
       await setDoc(superAdminRef, { isAdmin: true });
 
       toast({
         title: 'Success!',
-        description: 'You have been granted Super Admin privileges. Please refresh the page.',
+        description: 'You have been granted Super Admin privileges. Please refresh the page for changes to take effect.',
       });
       setStatus('success');
     } catch (error: any) {
