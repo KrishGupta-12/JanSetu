@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, BarChart, Bell, MapPin, Shield, Users } from 'lucide-react';
 import Image from 'next/image';
+import Logo from '@/components/common/Logo';
 
 const features = [
   {
@@ -36,8 +37,23 @@ const features = [
 export default function LandingPage() {
   return (
     <div className="flex-1 w-full bg-background">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-20 bg-background/80 backdrop-blur-sm border-b">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <Logo />
+          <div className="flex items-center gap-4">
+            <Button asChild variant="ghost">
+              <Link href="/login">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/signup">Sign Up</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
-      <section className="relative w-full h-[70vh] flex items-center justify-center text-center bg-cover bg-center">
+      <section className="relative w-full h-[70vh] flex items-center justify-center text-center bg-cover bg-center pt-16">
          <Image
             src="https://picsum.photos/seed/hero/1800/1200"
             alt="Cityscape"
