@@ -107,14 +107,16 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
 
   const { toast } = useToast();
   const { firestore } = useAuth();
-
+  
   const adminsQuery = useMemoFirebase(() => {
     if (!firestore || admin.role !== UserRole.SuperAdmin) {
       return null;
     }
+    // This query was causing crashes. The user list for assignment is now fetched inside the dropdown.
     return query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles));
   }, [firestore, admin.role]);
-  const { data: departmentAdmins } = useCollection<UserProfile>(adminsQuery);
+  
+  const { data: departmentAdmins, isLoading: areAdminsLoading } = useCollection<UserProfile>(adminsQuery);
 
 
   const filteredReports = useMemo(() => {
@@ -367,7 +369,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                           {admin.role === UserRole.SuperAdmin ? (
                            <>
                             <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
+                              <DropdownMenuSubTrigger disabled={areAdminsLoading}>
                                 <UserCheck className="mr-2 h-4 w-4" />
                                 Assign To
                               </DropdownMenuSubTrigger>
