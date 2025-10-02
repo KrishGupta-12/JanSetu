@@ -40,7 +40,7 @@ const reportFormSchema = z.object({
   complainantName: z.string().min(1, { message: 'Name is required.' }),
   complainantPhone: z.string().min(1, { message: 'Phone number is required.' }),
   locationAddress: z.string().min(1, { message: 'Address is required.' }),
-  photo: z.string().optional(),
+  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
 
@@ -50,7 +50,6 @@ export default function ReportForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
   const isBanned = useMemo(() => {
     if (!user || !user.bannedUntil) return false;
@@ -67,7 +66,7 @@ export default function ReportForm() {
       complainantPhone: '',
       locationAddress: '',
       citizenId: '',
-      photo: '',
+      imageUrl: '',
     },
   });
 
@@ -91,19 +90,6 @@ export default function ReportForm() {
     }
   }, [user, isUserLoading, router, toast]);
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        form.setValue('photo', base64String);
-        setPhotoPreview(base64String);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   async function onSubmit(values: ReportFormValues) {
     setIsSubmitting(true);
     const result = await submitReport(values);
@@ -114,7 +100,6 @@ export default function ReportForm() {
         description: result.message,
       });
       form.reset();
-      setPhotoPreview(null);
       router.push('/dashboard/my-reports');
     } else {
       toast({
@@ -231,27 +216,22 @@ export default function ReportForm() {
             )}
           />
           
-          <FormItem>
-            <FormLabel>Photo (Optional)</FormLabel>
-             <FormControl>
-                <div className="relative w-full h-48 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50 hover:border-primary transition-colors">
-                    <Input id="photo-upload" type="file" accept="image/*" className="absolute w-full h-full opacity-0 cursor-pointer" onChange={handlePhotoChange} />
-                    {photoPreview ? (
-                        <Image src={photoPreview} alt="Preview" fill style={{ objectFit: 'cover' }} className="rounded-lg" />
-                    ) : (
-                        <div className="text-center text-muted-foreground">
-                            <ImageIcon className="mx-auto h-10 w-10" />
-                            <p className="mt-2 text-sm">Click or drag to upload a photo</p>
-                        </div>
-                    )}
-                </div>
-            </FormControl>
-            <FormDescription>
-                A photo helps us understand the issue better.
-            </FormDescription>
-            <input type="hidden" {...form.register('photo')} />
-            <FormMessage />
-          </FormItem>
+          <FormField
+            control={form.control}
+            name="imageUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Photo URL (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="https://example.com/image.jpg" {...field} />
+                </FormControl>
+                 <FormDescription>
+                 A photo helps us understand the issue better.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

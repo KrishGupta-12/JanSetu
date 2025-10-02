@@ -16,7 +16,7 @@ const reportSchema = z.object({
   complainantName: z.string().min(1, { message: 'Name is required.' }),
   complainantPhone: z.string().min(1, { message: 'Phone number is required.' }),
   locationAddress: z.string().min(1, { message: 'Address is required.' }),
-  photo: z.string().optional(),
+  imageUrl: z.string().url().optional().or(z.literal('')),
   citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
 
@@ -88,7 +88,7 @@ export async function submitReport(
     };
   }
 
-  const { photo, description, citizenId, complainantName, complainantPhone, locationAddress, category } = validatedFields.data;
+  const { imageUrl, description, citizenId, complainantName, complainantPhone, locationAddress, category } = validatedFields.data;
   
   try {
     const { firestore } = await initializeAdminApp();
@@ -99,7 +99,7 @@ export async function submitReport(
       complainantPhone,
       locationAddress,
       description,
-      imageUrl: photo || '',
+      imageUrl: imageUrl || '',
       category,
       reportDate: new Date().toISOString(),
       status: ReportStatus.Pending,
