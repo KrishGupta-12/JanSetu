@@ -30,37 +30,48 @@ export type FormState = {
 async function updateUserStatsAndLeaderboard(firestore: FirebaseFirestore.Firestore, citizenId: string) {
     const userRef = firestore.collection('users').doc(citizenId);
     
-    await firestore.runTransaction(async (transaction) => {
-      transaction.update(userRef, {
-        totalReports: FieldValue.increment(1)
-      });
-    });
-
-    // In a real-world app, this might be a scheduled function,
-    // but for now, we'll update it on every new report.
-    await updateLeaderboard(firestore);
+    try {
+        await firestore.runTransaction(async (transaction) => {
+            transaction.update(userRef, {
+                totalReports: FieldValue.increment(1)
+            });
+        });
+        await updateLeaderboard(firestore);
+    } catch (error) {
+        console.error("Error in updateUserStatsAndLeaderboard transaction:", error);
+        // Don't throw, as the main report submission succeeded.
+    }
 }
 
 async function updateLeaderboard(firestore: FirebaseFirestore.Firestore) {
-    const usersSnapshot = await firestore.collection('users').where('role', '==', 'citizen').get();
-    const users = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
+    try {
+        const usersSnapshot = await firestore.collection('users').where('role', '==', 'citizen').get();
+        if (usersSnapshot.empty) {
+            return;
+        }
+        
+        const users = usersSnapshot.docs.map(doc => doc.data() as UserProfile);
 
-    const leaderboardData = users.map(user => {
-        const score = (user.resolvedReports || 0) * 5 + (user.totalReports || 0);
-        return {
-            uid: user.uid,
-            name: user.name,
-            score,
-            totalReports: user.totalReports || 0,
-            resolvedReports: user.resolvedReports || 0,
-        };
-    }).sort((a, b) => b.score - a.score).slice(0, 20);
+        const leaderboardData = users.map(user => {
+            const score = (user.resolvedReports || 0) * 5 + (user.totalReports || 0);
+            return {
+                uid: user.uid,
+                name: user.name,
+                score,
+                totalReports: user.totalReports || 0,
+                resolvedReports: user.resolvedReports || 0,
+            };
+        }).sort((a, b) => b.score - a.score).slice(0, 20);
 
-    const leaderboardRef = firestore.collection('leaderboard').doc('top_contributors');
-    await leaderboardRef.set({
-        users: leaderboardData,
-        lastUpdated: new Date().toISOString(),
-    });
+        const leaderboardRef = firestore.collection('leaderboard').doc('top_contributors');
+        await leaderboardRef.set({
+            users: leaderboardData,
+            lastUpdated: new Date().toISOString(),
+        });
+    } catch (error) {
+         console.error("Error updating leaderboard:", error);
+         // Don't throw, as the main report submission succeeded.
+    }
 }
 
 
