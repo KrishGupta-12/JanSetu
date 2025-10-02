@@ -1,4 +1,3 @@
-
 'use client';
 import { useAuth } from '@/hooks/useAuth';
 import { Report, ReportStatus, UserProfile } from '@/lib/types';

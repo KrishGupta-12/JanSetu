@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
@@ -73,7 +72,7 @@ export default function CommunityFeedPage() {
         if (!reports || !users) return [];
         return reports.map(report => {
             const citizen = users.find(u => u.uid === report.citizenId);
-            return { ...report, citizen };
+            return { ...report, citizenName: citizen?.name || 'Anonymous' };
         });
     }, [reports, users]);
 
@@ -130,11 +129,11 @@ export default function CommunityFeedPage() {
                         <Card key={report.id} className="shadow-md">
                             <CardHeader className="flex flex-row items-start gap-4">
                                 <Avatar className="h-12 w-12">
-                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${report.citizen?.name}`} />
-                                    <AvatarFallback>{report.citizen?.name ? report.citizen.name.charAt(0) : 'A'}</AvatarFallback>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${report.citizenName}`} />
+                                    <AvatarFallback>{report.citizenName ? report.citizenName.charAt(0) : 'A'}</AvatarFallback>
                                 </Avatar>
                                 <div className='flex-1'>
-                                    <p className="font-semibold">{report.citizen?.name || 'Anonymous'}</p>
+                                    <p className="font-semibold">{report.citizenName}</p>
                                     <p className="text-sm text-muted-foreground">
                                         {report.reportDate ? formatDistanceToNow(new Date(report.reportDate), { addSuffix: true }) : 'Just now'}
                                     </p>

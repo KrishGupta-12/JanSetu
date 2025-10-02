@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -38,40 +37,33 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const userReportsQuery = useMemoFirebase(
-    () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid), limit(2)) : null,
+    () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid), limit(5)) : null,
     [user, firestore]
   );
   const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
-  
-  const allReportsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'issueReports'));
-  }, [firestore]);
-  const { data: allReports, isLoading: areAllReportsLoading } = useCollection<Report>(allReportsQuery);
-
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-     if (!isUserLoading && user && user.role) { // Any role indicates an admin
-      if(user.role !== 'citizen') router.push('/admin');
+     if (!isUserLoading && user && user.role && user.role !== 'citizen') {
+      router.push('/admin');
     }
   }, [user, isUserLoading, router]);
 
-  const isLoading = isUserLoading || isReportsLoading || areAllReportsLoading;
+  const isLoading = isUserLoading || isReportsLoading;
 
   if (isLoading || !user || user.role !== 'citizen') {
     return (
        <div className="flex-1 w-full p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-            <div className="lg:col-span-1 flex flex-col gap-6">
-                <Skeleton className="h-[180px] w-full rounded-xl" />
-                <Skeleton className="flex-1 w-full rounded-xl" />
+        <div className="space-y-6">
+            <Skeleton className="h-10 w-1/2" />
+            <Skeleton className="h-8 w-3/4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-40 w-full rounded-xl" />
             </div>
-             <div className="lg:col-span-2 flex flex-col gap-6">
-                 <Skeleton className="flex-1 w-full rounded-xl" />
-            </div>
+            <Skeleton className="h-64 w-full rounded-xl" />
         </div>
        </div>
     );
@@ -124,7 +116,7 @@ export default function DashboardPage() {
         <CardContent>
             {userReports && userReports.length > 0 ? (
                 <ul className="space-y-3">
-                    {userReports.slice(0,5).map(report => (
+                    {userReports.map(report => (
                         <li key={report.id} className="flex justify-between items-center text-sm p-3 rounded-lg bg-secondary">
                             <span className="truncate pr-4 font-medium">{report.description}</span>
                             <Badge className={cn('font-semibold', statusStyles[report.status])}>
