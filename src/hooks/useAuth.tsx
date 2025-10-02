@@ -2,12 +2,12 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirebase, useFirestore, useAuth as useFirebaseAuth } from '@/firebase';
-import { UserProfile, AdminRole } from '@/lib/types';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useFirebase, useFirestore } from '@/firebase';
+import { UserProfile } from '@/lib/types';
 import { generateJanId } from '@/lib/utils';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { mockAdmins } from '@/lib/data'; // Keep for admin role simulation
+import { mockAdmins } from '@/lib/data'; 
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -39,7 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDoc.exists()) {
           setUser(userDoc.data() as UserProfile);
         } else {
-            // Check if it's a mock admin logging in for the first time
             const mockAdmin = mockAdmins.find(admin => admin.email === fbUser.email);
             if (mockAdmin) {
                 const newAdminProfile: UserProfile = {
@@ -47,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     uid: fbUser.uid,
                     dateJoined: new Date().toISOString(),
                 };
-                await setDoc(userDocRef, newAdminProfile);
+                setDocumentNonBlocking(userDocRef, newAdminProfile, { merge: false });
                 setUser(newAdminProfile);
             } else {
                  setUser(null); 
@@ -67,14 +66,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await signInWithEmailAndPassword(auth, email, password);
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
-      // Try to sign up if it's a new mock admin
       const mockAdmin = mockAdmins.find(admin => admin.email === email);
       if (mockAdmin && error.code === 'auth/user-not-found') {
           try {
               const userCredential = await createUserWithEmailAndPassword(auth, email, password);
               const { uid } = userCredential.user;
               const newAdminProfile: UserProfile = { ...mockAdmin, uid, dateJoined: new Date().toISOString() };
-              await setDoc(doc(firestore, 'users', uid), newAdminProfile);
+              const userDocRef = doc(firestore, 'users', uid);
+              setDocumentNonBlocking(userDocRef, newAdminProfile, { merge: false });
               setUser(newAdminProfile);
               return { success: true, message: 'Admin account created and logged in.' };
           } catch (signupError: any) {
@@ -100,7 +99,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             dateJoined: new Date().toISOString(),
         };
         
-        await setDoc(doc(firestore, 'users', uid), newUserProfile);
+        const userDocRef = doc(firestore, 'users', uid);
+        setDocumentNonBlocking(userDocRef, newUserProfile, { merge: false });
         
         setUser(newUserProfile);
 

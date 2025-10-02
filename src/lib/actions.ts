@@ -6,8 +6,9 @@ import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { classifyReport } from '@/ai/flows/classify-report';
 import { ReportCategory } from './types';
 import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { Report } from './types';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const reportSchema = z.object({
   category: z.nativeEnum(ReportCategory),
@@ -70,9 +71,8 @@ export async function submitReport(
         citizenIdsWhoUpvoted: [],
     };
 
-    // In a real app, this is where you'd save the report to the database.
     const reportsCollection = collection(firestore, 'issueReports');
-    await addDoc(reportsCollection, reportData);
+    addDocumentNonBlocking(reportsCollection, reportData);
 
     return {
       status: 'success',
