@@ -22,11 +22,15 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ReportStatus } from '@/lib/types';
 import { mockReports, mockAdmins } from '@/lib/data';
+import { Files } from 'lucide-react';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
   [ReportStatus.InProgress]: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
   [ReportStatus.Resolved]: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
+  [ReportStatus.Rejected]: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
+  [ReportStatus.PendingCitizenFeedback]: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700',
+  [ReportStatus.PendingApproval]: 'bg-pink-100 text-pink-800 border-pink-300 dark:bg-pink-900/50 dark:text-pink-300 dark:border-pink-700',
 };
 
 
@@ -82,14 +86,19 @@ export default function DashboardPage() {
         <div className="xl:col-span-4 flex flex-col gap-6">
           <AqiCard />
            <Card className="flex-1 shadow-lg">
-            <CardHeader>
-              <CardTitle>My Reports</CardTitle>
-              <CardDescription>A summary of issues you've reported.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle>My Reports</CardTitle>
+                <CardDescription>A summary of issues you've reported.</CardDescription>
+              </div>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/dashboard/my-reports">View All</Link>
+              </Button>
             </CardHeader>
             <CardContent>
                 {userReports && userReports.length > 0 ? (
                     <ul className="space-y-3">
-                        {userReports.slice(0,5).map(report => (
+                        {userReports.slice(0,3).map(report => (
                             <li key={report.id} className="flex justify-between items-center text-sm">
                                 <span className="truncate pr-4">{report.description}</span>
                                 <Badge className={cn('font-semibold', statusStyles[report.status])}>

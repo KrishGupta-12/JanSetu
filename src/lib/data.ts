@@ -185,6 +185,20 @@ export const mockReports: Report[] = [
     status: ReportStatus.Resolved,
     assignedAdminId: 'admin-004',
     assignedAdminName: 'Streetlight Dept Head',
+    resolution: {
+      adminId: 'admin-004',
+      adminName: 'Streetlight Dept Head',
+      date: new Date('2024-07-16T12:00:00Z').toISOString(),
+      summary: 'Replaced the faulty bulb and checked the wiring. The streetlight is now fully functional.',
+      cost: 500,
+      costBreakdown: 'New LED Bulb: 350, Labor: 150',
+      afterImageUrl: 'https://picsum.photos/seed/light-fixed/400/300',
+      citizenFeedback: 'Thank you for the quick action! The street feels much safer now.',
+      citizenRating: 5,
+      superAdminFeedback: 'Excellent turnaround time. Well done.',
+      superAdminRating: 5,
+      isApproved: true,
+    }
   },
   {
     id: 'RPT-004',
@@ -207,9 +221,20 @@ export const mockReports: Report[] = [
     longitude: 77.2225,
     imageUrl: '',
     reportDate: new Date('2024-07-10T11:00:00Z').toISOString(),
-    status: ReportStatus.Resolved,
+    status: ReportStatus.PendingApproval,
     assignedAdminId: 'admin-002', // Assume waste handles it
     assignedAdminName: 'Waste Dept Head',
+     resolution: {
+      adminId: 'admin-002',
+      adminName: 'Waste Dept Head',
+      date: new Date('2024-07-11T15:00:00Z').toISOString(),
+      summary: 'The broken bench has been removed. A new one will be installed next week as per the park maintenance schedule.',
+      cost: 1500,
+      costBreakdown: 'Labor for removal: 500, Disposal Fee: 1000',
+      afterImageUrl: 'https://picsum.photos/seed/bench-gone/400/300',
+      citizenFeedback: 'Thanks for removing it, but when is the new one coming?',
+      citizenRating: 3,
+    }
   },
   {
     id: 'RPT-006',
@@ -232,8 +257,18 @@ export const mockReports: Report[] = [
     longitude: 77.1943,
     imageUrl: 'https://picsum.photos/seed/pothole2/400/300',
     reportDate: new Date('2024-07-21T11:20:00Z').toISOString(),
-    status: ReportStatus.Pending,
-    assignedAdminName: 'Unassigned',
+    status: ReportStatus.PendingCitizenFeedback,
+    assignedAdminId: 'admin-003',
+    assignedAdminName: 'Pothole Dept Head',
+    resolution: {
+      adminId: 'admin-003',
+      adminName: 'Pothole Dept Head',
+      date: new Date('2024-07-22T10:00:00Z').toISOString(),
+      summary: 'Applied temporary patchwork to all potholes. Awaiting budget for permanent resurfacing.',
+      cost: 8000,
+      costBreakdown: 'Tar: 5000, Labor: 3000',
+      afterImageUrl: 'https://picsum.photos/seed/pothole-patched/400/300',
+    }
   },
   {
     id: 'RPT-008',
@@ -297,6 +332,20 @@ export const mockReports: Report[] = [
     status: ReportStatus.Resolved,
     assignedAdminId: 'admin-002',
     assignedAdminName: 'Waste Dept Head',
+     resolution: {
+      adminId: 'admin-002',
+      adminName: 'Waste Dept Head',
+      date: new Date('2024-07-18T12:00:00Z').toISOString(),
+      summary: 'Coordinated with local animal welfare NGO. They have relocated the dogs to a shelter.',
+      cost: 0,
+      costBreakdown: 'Work done by NGO volunteers.',
+      afterImageUrl: '',
+      citizenFeedback: 'Great work, much appreciated!',
+      citizenRating: 5,
+      superAdminFeedback: 'Good use of community resources.',
+      superAdminRating: 4,
+      isApproved: true,
+    }
   },
   {
     id: 'RPT-013',

@@ -11,7 +11,24 @@ export enum ReportStatus {
   InProgress = 'In Progress',
   Resolved = 'Resolved',
   Rejected = 'Rejected',
+  PendingApproval = 'Pending Approval', // New status for after admin submission
+  PendingCitizenFeedback = 'Pending Citizen Feedback', // New status
 }
+
+export type Resolution = {
+  adminId: string;
+  adminName: string;
+  date: string; // ISO string
+  summary: string;
+  cost: number;
+  costBreakdown: string;
+  afterImageUrl?: string;
+  citizenFeedback?: string;
+  citizenRating?: number; // e.g., 1-5
+  superAdminFeedback?: string;
+  superAdminRating?: number; // e.g., 1-5
+  isApproved?: boolean;
+};
 
 export type Report = {
   id: string;
@@ -25,6 +42,7 @@ export type Report = {
   status: ReportStatus;
   assignedAdminId?: string;
   assignedAdminName?: string;
+  resolution?: Resolution;
 };
 
 export type AqiSensor = {

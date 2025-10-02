@@ -6,7 +6,7 @@ import Logo from './Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '../ui/skeleton';
-import { LogOut, UserCircle } from 'lucide-react';
+import { LogOut, UserCircle, Files } from 'lucide-react';
 import { useMemo } from 'react';
 import { mockAdmins } from '@/lib/data';
 
@@ -18,6 +18,11 @@ function HeaderAuth() {
     logout();
     router.push('/');
   };
+
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    return mockAdmins.some(admin => admin.email === user.email);
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -31,6 +36,13 @@ function HeaderAuth() {
   if (user) {
     return (
       <>
+        {!isAdmin && (
+           <Button variant="ghost" asChild>
+             <Link href="/dashboard/my-reports">
+               <Files className="mr-2" /> My Reports
+             </Link>
+           </Button>
+        )}
         <Button variant="ghost" asChild>
           <Link href="/profile">
             <UserCircle className="mr-2" /> Profile
