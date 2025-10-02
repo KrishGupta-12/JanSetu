@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { ReportCategory, ReportStatus } from '@/lib/types';
+import { ReportCategory, ReportStatus, ReportUrgency } from '@/lib/types';
 import { reportCategories } from '@/lib/data';
 import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
 
@@ -114,7 +114,7 @@ export default function ReportForm() {
           status: ReportStatus.Pending,
           upvotes: 0,
           citizenIdsWhoUpvoted: [],
-          urgency: 'Medium',
+          urgency: 'Medium' as ReportUrgency,
         };
         
         const reportsCollection = collection(firestore, 'issueReports');

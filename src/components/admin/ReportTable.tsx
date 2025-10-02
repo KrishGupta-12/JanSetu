@@ -379,19 +379,10 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                                 ))}
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
+                            <DropdownMenuItem onClick={() => handleUpdateUrgency(report.id, 'Critical')}>
                                 <Siren className="mr-2 h-4 w-4" />
-                                Set Urgency
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent>
-                                {urgencyLevels.map(level => (
-                                  <DropdownMenuItem key={level} onClick={() => handleUpdateUrgency(report.id, level)}>
-                                    {level}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
+                                Mark as Critical
+                              </DropdownMenuItem>
                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleUpdateStatus(report.id, ReportStatus.Rejected)}>
                                 <ShieldX className="mr-2 h-4 w-4" />
                                 Mark as Rejected
