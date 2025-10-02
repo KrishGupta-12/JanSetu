@@ -2,12 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
-import { UserProfile, AdminCredential, ReportCategory, UserRole } from '@/lib/types';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
+import { UserProfile, ReportCategory, UserRole } from '@/lib/types';
 
 const getDepartmentFromRole = (role: UserRole): ReportCategory | undefined => {
     switch (role) {
@@ -43,36 +41,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { auth, firestore, isUserLoading: isFirebaseLoading } = useFirebase();
+  const { auth, firestore } = useFirebase();
 
   const fetchUserProfile = useCallback(async (fbUser: FirebaseUser) => {
-      setIsLoading(true);
       const userDocRef = doc(firestore, 'users', fbUser.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const profileData = userDoc.data() as UserProfile;
-        // If it's a department admin, ensure department is set from role
-        if(profileData.role && profileData.role !== UserRole.SuperAdmin) {
+        if(profileData.role && profileData.role !== UserRole.SuperAdmin && profileData.role !== UserRole.Citizen) {
             profileData.department = getDepartmentFromRole(profileData.role);
         }
         setUser(profileData);
       } else {
-        // This case would be for a first-time login for a pre-provisioned auth user
-        // or if a user's profile document was deleted.
-        // We'll create a basic profile.
-        await createUserProfile(fbUser);
+        // This case can happen if the user record is deleted from Firestore but not Auth
+        console.warn(`No user profile found for UID: ${fbUser.uid}. Logging out.`);
+        signOut(auth);
       }
-      setIsLoading(false);
-  }, [firestore]);
+  }, [firestore, auth]);
 
 
   useEffect(() => {
-    if (!auth) return;
-
-    const unsubscribe = auth.onAuthStateChanged(async (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
+        setIsLoading(true);
         await fetchUserProfile(fbUser);
+        setIsLoading(false);
       } else {
         setUser(null);
         setIsLoading(false);
@@ -108,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle fetching the profile
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
        return { success: false, message: error.message || 'Invalid email or password.' };
@@ -130,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isLoading: isLoading || isFirebaseLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, firebaseUser, isLoading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
