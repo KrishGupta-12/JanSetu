@@ -112,7 +112,7 @@ function UserRow({ citizen, reports, onBan, onUnban, banDurations }: { citizen: 
             </TableCell>
             <TableCell>{citizen.email}</TableCell>
             <TableCell>
-                <div className="font-medium text-center">{rejectedReports}</div>
+                <div className="font-medium text-center">{citizen.totalReports}</div>
             </TableCell>
             <TableCell>
                 {new Date(citizen.dateJoined).toLocaleDateString()}
@@ -247,7 +247,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Rejected Reports</TableHead>
+                  <TableHead>Total Reports</TableHead>
                   <TableHead>Date Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -271,3 +271,4 @@ export default function UsersPage() {
     </div>
   );
 }
+
