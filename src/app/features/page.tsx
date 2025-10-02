@@ -3,14 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Logo from '@/components/common/Logo';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BarChart, Bell, MapPin, Shield, Users, Sparkles, ThumbsUp, Award } from 'lucide-react';
+import { ArrowRight, BarChart, Bell, Shield, Users, Sparkles, ThumbsUp, Award } from 'lucide-react';
 
 const features = [
-  {
-    icon: <MapPin className="h-10 w-10 text-primary" />,
-    title: 'Geo-tagged Issue Reporting',
-    description: 'Citizens can easily report civic issues by dropping a pin on a map, which automatically captures the exact latitude and longitude.',
-  },
   {
     icon: <Sparkles className="h-10 w-10 text-primary" />,
     title: 'AI-Powered Classification',

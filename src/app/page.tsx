@@ -8,11 +8,6 @@ import Logo from '@/components/common/Logo';
 
 const features = [
   {
-    icon: <MapPin className="h-10 w-10 text-primary" />,
-    title: 'Real-time Issue Mapping',
-    description: 'Visualize reported issues on an interactive map, providing a clear overview of problems in your area.',
-  },
-  {
     icon: <BarChart className="h-10 w-10 text-primary" />,
     title: 'Live Air Quality Index',
     description: 'Stay informed about the air you breathe with real-time AQI data from sensors across the city.',
@@ -91,7 +86,7 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.slice(0,5).map((feature, index) => (
+            {features.map((feature, index) => (
               <Card key={index} className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card">
                 <CardHeader className="items-center text-center">
                   {feature.icon}

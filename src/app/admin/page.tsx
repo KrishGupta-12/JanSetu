@@ -7,8 +7,6 @@ import { Report, ReportStatus, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Siren } from 'lucide-react';
 import ReportTable from '@/components/admin/ReportTable';
-import MapView from '@/components/home/MapView';
-import { MapProvider } from '@/components/home/MapProvider';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -174,17 +172,7 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-            <CardTitle>City Report Hotspots</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[500px] p-0">
-             <MapProvider>
-                <MapView reports={reports || []} />
-             </MapProvider>
-        </CardContent>
-      </Card>
+      
        <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>

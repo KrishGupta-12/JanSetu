@@ -9,10 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import MapView from '@/components/home/MapView';
 import AqiCard from '@/components/home/AqiCard';
 import DisasterAlert from '@/components/home/DisasterAlert';
-import { MapProvider } from '@/components/home/MapProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
@@ -64,14 +62,13 @@ export default function DashboardPage() {
 
   if (isLoading || !user || user.role) {
     return (
-       <div className="flex-1 w-full">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
-            <div className="xl:col-span-8">
-                <Skeleton className="h-[400px] xl:h-[calc(100vh-4rem)] w-full rounded-xl" />
-            </div>
-            <div className="xl:col-span-4 flex flex-col gap-6">
+       <div className="flex-1 w-full p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+            <div className="lg:col-span-1 flex flex-col gap-6">
                 <Skeleton className="h-[180px] w-full rounded-xl" />
                 <Skeleton className="flex-1 w-full rounded-xl" />
+            </div>
+             <div className="lg:col-span-2 flex flex-col gap-6">
                  <Skeleton className="flex-1 w-full rounded-xl" />
             </div>
         </div>
@@ -80,7 +77,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 w-full relative">
+    <div className="flex-1 w-full relative p-6">
        <div className="space-y-6">
         <div>
             <h1 className="text-3xl font-headline font-bold tracking-tight">Citizen Dashboard</h1>
@@ -88,13 +85,8 @@ export default function DashboardPage() {
               Welcome back, {user.name}! Here's what's happening in your city.
             </p>
         </div>
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">
-        <div className="xl:col-span-7 rounded-xl shadow-lg overflow-hidden h-[400px] xl:h-[600px] flex flex-col bg-card">
-          <MapProvider>
-            <MapView reports={allReports || []} />
-          </MapProvider>
-        </div>
-        <div className="xl:col-span-5 flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+        <div className="lg:col-span-1 flex flex-col gap-6">
           <AqiCard />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Card className="shadow-lg">
@@ -120,11 +112,13 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
           </div>
-           <Card className="flex-1 shadow-lg">
+        </div>
+        <div className="lg:col-span-2">
+           <Card className="flex-1 shadow-lg h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div>
-                <CardTitle>My Reports</CardTitle>
-                <CardDescription>A summary of issues you've reported.</CardDescription>
+                <CardTitle>My Recent Reports</CardTitle>
+                <CardDescription>A summary of issues you've recently reported.</CardDescription>
               </div>
               <Button asChild variant="secondary" size="sm">
                 <Link href="/dashboard/my-reports">View All</Link>
@@ -133,9 +127,9 @@ export default function DashboardPage() {
             <CardContent>
                 {userReports && userReports.length > 0 ? (
                     <ul className="space-y-3">
-                        {userReports.slice(0,2).map(report => (
-                            <li key={report.id} className="flex justify-between items-center text-sm">
-                                <span className="truncate pr-4">{report.description}</span>
+                        {userReports.slice(0,5).map(report => (
+                            <li key={report.id} className="flex justify-between items-center text-sm p-3 rounded-lg bg-secondary">
+                                <span className="truncate pr-4 font-medium">{report.description}</span>
                                 <Badge className={cn('font-semibold', statusStyles[report.status])}>
                                     {report.status}
                                 </Badge>
@@ -143,7 +137,13 @@ export default function DashboardPage() {
                         ))}
                     </ul>
                 ) : (
-                    <p className="text-sm text-muted-foreground">You haven't reported any issues yet.</p>
+                    <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
+                        <Files className="h-12 w-12 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mt-4">You haven't reported any issues yet.</p>
+                        <Button asChild size="sm" className="mt-4">
+                            <Link href="/report">Report Your First Issue</Link>
+                        </Button>
+                    </div>
                 )}
             </CardContent>
           </Card>
