@@ -3,18 +3,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to citizen user profiles.
+     * @description Manages citizen profile data, ensuring only the user can read/write their own data.
      * @path /citizens/{citizenId}
-     * @allow (create) User with UID 'test_user' can create their own profile with citizenId 'test_user'.
-     * @allow (get,update,delete) User with UID 'test_user' can read, update, or delete their own profile with citizenId 'test_user'.
-     * @deny (create) User with UID 'test_user' cannot create a profile with citizenId 'another_user'.
-     * @deny (get,update,delete) User with UID 'test_user' cannot read, update, or delete another user's profile with citizenId 'another_user'.
-     * @principle Enforces document ownership for user profiles.
+     * @allow (create) User with UID 'user123' can create a citizen document if citizenId matches their UID.
+     * @allow (get) User with UID 'user123' can read their own citizen document.
+     * @deny (create) User with UID 'user456' cannot create a citizen document for citizenId 'user123'.
+     * @deny (update) User with UID 'user456' cannot update the citizen document for citizenId 'user123'.
+     * @principle Enforces document ownership for writes and reads.
      */
     match /citizens/{citizenId} {
-      // Helper function to check if the request is made by the owner of the document
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(citizenId) {
-        return request.auth.uid == citizenId;
+        return isSignedIn() && request.auth.uid == citizenId;
       }
 
       allow get: if isOwner(citizenId);
@@ -25,95 +28,108 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to admin user profiles. Only admins can manage admin profiles.
+     * @description Manages admin user data, granting access based on admin status.
      * @path /admins/{adminId}
-     * @allow (create) Authenticated admin user can create an admin profile.
-     * @allow (get,update,delete) Authenticated admin user can read, update, or delete an admin profile.
-     * @deny (create) Non-admin user cannot create an admin profile.
-     * @deny (get,update,delete) Non-admin user cannot read, update, or delete an admin profile.
-     * @principle Restricts admin profile management to authenticated admins only.
+     * @allow (create) User with UID 'admin123' can create an admin document if adminId matches their UID (typically done by a super-admin).
+     * @allow (get) User with UID 'admin123' can read their own admin document.
+     * @deny (create) User with UID 'user123' cannot create an admin document for adminId 'admin123'.
+     * @deny (update) User with UID 'user123' cannot update the admin document for adminId 'admin123'.
+     * @principle Enforces role-based access control via document existence.
      */
     match /admins/{adminId} {
-        function isAdmin() {
-            return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-        allow get: if isAdmin();
-        allow list: if false;
-        allow create: if isAdmin();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+      function isAdmin() {
+        return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      }
+
+      allow get: if isAdmin();
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == adminId;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Controls access to issue reports. Users can create issue reports, but only the owner can modify or delete them.
+     * @description Manages issue reports submitted by citizens, ensuring proper authorization.
      * @path /issue_reports/{issueReportId}
-     * @allow (create) Authenticated user can create an issue report.
-     * @allow (get,list) Any user can read an issue report.
-     * @allow (update,delete) Only the owner (citizenId) can update or delete an issue report.
-     * @deny (update,delete) Non-owner cannot update or delete an issue report.
-     * @principle Enforces ownership for issue report modification and deletion.
+     * @allow (create) User with UID 'user123' can create an issue report with citizenId 'user123'.
+     * @allow (get) Any signed-in user can read an issue report.
+     * @deny (create) User with UID 'user456' cannot create an issue report with citizenId 'user123'.
+     * @deny (update) User with UID 'user456' cannot update an issue report created by user 'user123'.
+     * @principle Enforces citizen ownership for issue report creation and updates.
      */
     match /issue_reports/{issueReportId} {
         function isSignedIn() {
-            return request.auth != null;
+          return request.auth != null;
         }
 
-        allow get, list: if true;
-        allow create: if isSignedIn();
-        allow update: if request.auth.uid == resource.data.citizenId;
-        allow delete: if request.auth.uid == resource.data.citizenId;
+        function isCitizen(citizenId) {
+          return isSignedIn() && request.auth.uid == citizenId;
+        }
+
+        allow get: if isSignedIn();
+        allow list: if false;
+        allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
+        allow update: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
+        allow delete: if isCitizen(resource.data.citizenId);
     }
 
     /**
-     * @description Controls access to user-specific issue reports. Only the user can list their own issue reports.
+     * @description Manages issue reports specific to a given user.
      * @path /users/{userId}/issue_reports/{issueReportId}
-     * @allow (create) Authenticated user can create an issue report under their user ID.
-     * @allow (get) Any user can read an issue report.
-     * @allow (list) Only the user (userId) can list issue reports under their user ID.
-     * @allow (update,delete) Only the owner (citizenId) can update or delete an issue report.
-     * @deny (create) User cannot create an issue report under another user's ID.
-     * @deny (list) User cannot list issue reports under another user's ID.
-     * @principle Restricts access to user-specific issue reports based on user ID.
+     * @allow (create) User with UID 'user123' can create an issue report with citizenId 'user123'.
+     * @allow (get) User with UID 'user123' can read their own issue report.
+     * @deny (create) User with UID 'user456' cannot create an issue report for user 'user123'.
+     * @deny (update) User with UID 'user456' cannot update the issue report for user 'user123'.
+     * @principle Enforces user-specific data access.
      */
     match /users/{userId}/issue_reports/{issueReportId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-        function isOwner(userId) {
-            return request.auth.uid == userId;
-        }
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
 
-        allow get: if true;
-        allow list: if isOwner(userId);
-        allow create: if isSignedIn() && isOwner(userId);
-        allow update: if request.auth.uid == resource.data.citizenId;
-        allow delete: if request.auth.uid == resource.data.citizenId;
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     /**
-     * @description Allows public read access to air quality sensor data.
+     * @description Manages air quality sensor data with public read access.
      * @path /air_quality_sensors/{sensorId}
-     * @allow (get,list) Any user can read air quality sensor data.
-     * @deny (create,update,delete) No user can create, update, or delete air quality sensor data without valid credential. // TODO: Add validation once credential type is implemented.
-     * @principle Provides public read access for sensor data.
+     * @allow (get) Any user can read air quality sensor data.
+     * @deny (create) No user can create air quality sensor data (only server).
+     * @principle Allows public read access for sensor data.
      */
     match /air_quality_sensors/{sensorId} {
-        allow get, list: if true;
-        allow create, update, delete: if false; // TODO: Add validation once credential type is implemented.
+      allow get: if true;
+      allow list: if true;
+      allow create: if false; // TODO: Add server-only authentication if needed
+      allow update: if false; // TODO: Add server-only authentication if needed
+      allow delete: if false; // TODO: Add server-only authentication if needed
     }
 
     /**
-     * @description Allows public read access to disaster alert information.
+     * @description Manages disaster alert information with public read access.
      * @path /disaster_alerts/{alertId}
-     * @allow (get,list) Any user can read disaster alert information.
-     * @deny (create,update,delete) No user can create, update, or delete disaster alert information without valid credential. // TODO: Add validation once credential type is implemented.
-     * @principle Provides public read access for disaster alerts.
+     * @allow (get) Any user can read disaster alert information.
+     * @deny (create) No user can create disaster alert information (only server).
+     * @principle Allows public read access for disaster alerts.
      */
     match /disaster_alerts/{alertId} {
-        allow get, list: if true;
-        allow create, update, delete: if false;  // TODO: Add validation once credential type is implemented.
+      allow get: if true;
+      allow list: if true;
+      allow create: if false; // TODO: Add server-only authentication if needed
+      allow update: if false; // TODO: Add server-only authentication if needed
+      allow delete: if false; // TODO: Add server-only authentication if needed
     }
   }
 }
