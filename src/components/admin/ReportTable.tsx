@@ -53,7 +53,7 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, FieldValue, increment } from 'firebase/firestore';
+import { collection, query, doc, FieldValue, increment, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -109,9 +109,10 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
 
   const adminsQuery = useMemoFirebase(() => {
     if (!firestore || admin.role !== UserRole.SuperAdmin) return null;
-    return query(collection(firestore, 'users'));
+    // Securely query for ONLY department admins, not all users.
+    return query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles));
   }, [firestore, admin.role]);
-  const { data: allAdmins } = useCollection<UserProfile>(adminsQuery);
+  const { data: departmentAdmins } = useCollection<UserProfile>(adminsQuery);
 
 
   const filteredReports = useMemo(() => {
@@ -324,7 +325,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                                 Assign To
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent>
-                                {allAdmins?.filter(a => a.role && DepartmentAdminRoles.includes(a.role)).map(deptAdmin => (
+                                {departmentAdmins?.map(deptAdmin => (
                                   <DropdownMenuItem key={deptAdmin.uid} onClick={() => handleAssignAdmin(report.id, deptAdmin)}>
                                     {deptAdmin.name} ({deptAdmin.department})
                                   </DropdownMenuItem>
@@ -547,3 +548,5 @@ function ResolutionForm({ report, admin, onClose, onSave }: { report: Report | n
         </DialogContent>
     )
 }
+
+    
