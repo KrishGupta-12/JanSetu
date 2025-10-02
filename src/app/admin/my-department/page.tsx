@@ -48,20 +48,27 @@ export default function MyDepartmentPage() {
             avgResolutionTime: 0, avgCitizenRating: 0, totalCost: 0
         };
     }
-    const resolvedReports = reports.filter(r => r.status === ReportStatus.Resolved && r.resolution);
+
     if (reports.length === 0) {
         return {
             total: 0, pending: 0, inProgress: 0, resolved: 0,
             avgResolutionTime: 0, avgCitizenRating: 0, totalCost: 0
         };
     }
+    
+    const resolvedReports = reports.filter(r => r.status === ReportStatus.Resolved && r.resolution);
+    
+    const reportsWithPotentialRating = reports.filter(r => 
+        r.resolution && 
+        [ReportStatus.Resolved, ReportStatus.PendingApproval].includes(r.status)
+    );
 
     const totalResolutionTime = resolvedReports.reduce((acc, r) => {
         return acc + differenceInDays(new Date(r.resolution!.date), new Date(r.reportDate));
     }, 0);
 
-    const totalCitizenRating = resolvedReports.reduce((acc, r) => acc + (r.resolution!.citizenRating || 0), 0);
-    const ratedReportsCount = resolvedReports.filter(r => r.resolution!.citizenRating).length;
+    const ratedReports = reportsWithPotentialRating.filter(r => r.resolution!.citizenRating && r.resolution!.citizenRating > 0);
+    const totalCitizenRating = ratedReports.reduce((acc, r) => acc + (r.resolution!.citizenRating || 0), 0);
     const totalCost = reports.reduce((acc, r) => acc + (r.resolution?.cost || 0), 0);
     
     return {
@@ -70,7 +77,7 @@ export default function MyDepartmentPage() {
       inProgress: reports.filter(r => r.status === ReportStatus.InProgress).length,
       resolved: resolvedReports.length,
       avgResolutionTime: resolvedReports.length > 0 ? (totalResolutionTime / resolvedReports.length).toFixed(1) : 0,
-      avgCitizenRating: ratedReportsCount > 0 ? (totalCitizenRating / ratedReportsCount).toFixed(1) : 0,
+      avgCitizenRating: ratedReports.length > 0 ? (totalCitizenRating / ratedReports.length).toFixed(1) : 0,
       totalCost,
     };
   }, [reports]);
