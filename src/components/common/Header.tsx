@@ -14,11 +14,6 @@ function HeaderAuth() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
 
-  const isAdmin = useMemo(() => {
-    if (!user) return false;
-    return mockAdmins.some(admin => admin.email === user.email);
-  }, [user]);
-
   const handleSignOut = () => {
     logout();
     router.push('/');
@@ -36,14 +31,6 @@ function HeaderAuth() {
   if (user) {
     return (
       <>
-        <Button variant="ghost" asChild>
-          <Link href="/dashboard">Dashboard</Link>
-        </Button>
-        {isAdmin && (
-          <Button variant="ghost" asChild>
-            <Link href="/admin">Admin</Link>
-          </Button>
-        )}
         <Button variant="ghost" asChild>
           <Link href="/profile">
             <UserCircle className="mr-2" /> Profile
