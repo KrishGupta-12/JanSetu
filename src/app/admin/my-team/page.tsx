@@ -59,7 +59,7 @@ export default function MyTeamPage() {
   }, [adminData, isUserLoading, router]);
 
   const teamQuery = useMemoFirebase(() => {
-    if (!firestore || !adminData || !adminData.department) return null;
+    if (!firestore || !adminData || !adminData.department || !isDepartmentAdmin(adminData.role)) return null;
     return query(collection(firestore, 'users'), where('department', '==', adminData.department));
   }, [adminData, firestore]);
 

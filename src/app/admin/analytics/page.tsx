@@ -28,7 +28,7 @@ const categoryColors: {[key in ReportCategory]: string} = {
 
 
 export default function AnalyticsPage() {
-    const { firestore } = useAuth();
+    const { user: adminUser, firestore } = useAuth();
 
     const reportsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -37,9 +37,9 @@ export default function AnalyticsPage() {
     const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
         return query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles));
-    }, [firestore]);
+    }, [firestore, adminUser]);
     const { data: departmentAdmins, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const reportsByStatus = useMemo(() => {

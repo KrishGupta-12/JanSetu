@@ -83,7 +83,7 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || adminUser?.role !== UserRole.SuperAdmin) return null;
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'users'), where('role', '==', 'citizen'), orderBy('dateJoined', 'desc'));
   }, [firestore, adminUser]);
   const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(usersQuery);
