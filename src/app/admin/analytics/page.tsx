@@ -4,9 +4,9 @@ import { Report, ReportCategory, ReportStatus, UserRole, UserProfile, Department
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { useMemo } from 'react';
-import { differenceInDays, subDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 
 const statusColors: {[key in ReportStatus]: string} = {
@@ -35,12 +35,6 @@ export default function AnalyticsPage() {
         return query(collection(firestore, 'issueReports'));
     }, [firestore]);
     const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
-
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
-        return query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles));
-    }, [firestore, adminUser]);
-    const { data: departmentAdmins, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const reportsByStatus = useMemo(() => {
         if (!reports) return [];
@@ -82,32 +76,8 @@ export default function AnalyticsPage() {
         });
         return data;
     }, [reports]);
-    
-    const departmentPerformance = useMemo(() => {
-        if (!reports || !departmentAdmins) return [];
-        return departmentAdmins.map(admin => {
-            const deptReports = reports.filter(r => r.assignedAdminId === admin.uid && r.status === ReportStatus.Resolved && r.resolution);
-            if(deptReports.length === 0) return null;
 
-            const totalResolutionTime = deptReports.reduce((acc, r) => {
-                return acc + differenceInDays(new Date(r.resolution!.date), new Date(r.reportDate));
-            }, 0);
-
-            const totalCitizenRating = deptReports.reduce((acc, r) => acc + (r.resolution!.citizenRating || 0), 0);
-            const ratedReportsCount = deptReports.filter(r => r.resolution!.citizenRating).length;
-            
-            const totalCost = deptReports.reduce((acc, r) => acc + (r.resolution!.cost || 0), 0);
-
-            return {
-                department: admin.department,
-                avgResolutionTime: totalResolutionTime / deptReports.length,
-                avgCitizenRating: ratedReportsCount > 0 ? totalCitizenRating / ratedReportsCount : 0,
-                totalCost,
-            }
-        }).filter(Boolean);
-    }, [reports, departmentAdmins]);
-
-    if (reportsLoading || usersLoading) {
+    if (reportsLoading) {
         return <div>Loading analytics...</div>
     }
 
@@ -171,53 +141,6 @@ export default function AnalyticsPage() {
                     </ResponsiveContainer>
                 </CardContent>
             </Card>
-             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Avg. Resolution Time (Days)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={departmentPerformance}>
-                                <XAxis dataKey="department" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={80} />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="avgResolutionTime" name="Avg. Days" fill="hsl(var(--chart-2))" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Avg. Citizen Satisfaction</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={departmentPerformance}>
-                                <XAxis dataKey="department" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={80} />
-                                <YAxis domain={[0, 5]} />
-                                <Tooltip />
-                                <Bar dataKey="avgCitizenRating" name="Avg. Rating" fill="hsl(var(--chart-3))" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Total Department Cost</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={departmentPerformance}>
-                                <XAxis dataKey="department" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={80} />
-                                <YAxis />
-                                <Tooltip formatter={(value: number) => `Rs.${value.toLocaleString()}`} />
-                                <Bar dataKey="totalCost" name="Total Cost" fill="hsl(var(--chart-4))" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            </div>
         </div>
     )
 }
