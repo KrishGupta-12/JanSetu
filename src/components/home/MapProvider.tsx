@@ -1,11 +1,17 @@
 'use client';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from 'react';
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
+  const [isClient, setIsClient] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  if (typeof window === 'undefined') {
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
     return <Skeleton className="w-full h-full" />;
   }
 
