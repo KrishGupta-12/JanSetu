@@ -31,7 +31,7 @@ import { ShieldAlert, MoreHorizontal, Ban, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { add } from 'date-fns';
-import { useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, orderBy, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -162,39 +162,21 @@ function UserRow({ citizen, reports, onBan, onUnban, banDurations }: { citizen: 
     );
 }
 
-function CitizenProfile({ citizenId, reports, ...props }: { citizenId: string, reports: Report[], [key: string]: any }) {
-    const { firestore } = useAuth();
-    const citizenDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', citizenId) : null, [firestore, citizenId]);
-    const { data: citizen, isLoading } = useDoc<UserProfile>(citizenDocRef);
-
-    if (isLoading || !citizen) {
-        return (
-             <TableRow>
-                <TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell>
-             </TableRow>
-        );
-    }
-    
-    return <UserRow citizen={citizen} reports={reports} {...props} />;
-}
-
-
 export default function UsersPage() {
   const { user: adminUser, isLoading: isUserLoading, firestore } = useAuth();
   const { toast } = useToast();
   
-  // ROOT CAUSE FIX: Fetch reports, not users. This is secure.
+  const citizensQuery = useMemoFirebase(() => {
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
+    return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
+  }, [firestore, adminUser]);
+  const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
+
   const reportsQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'issueReports'));
   }, [firestore, adminUser]);
   const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
-
-  const uniqueCitizenIds = useMemo(() => {
-      if (!reports) return [];
-      const ids = reports.map(r => r.citizenId);
-      return [...new Set(ids)];
-  }, [reports]);
 
   const handleBan = (citizenId: string, duration: Duration | 'lifetime') => {
     if (!firestore) return;
@@ -233,7 +215,7 @@ export default function UsersPage() {
     { label: 'Lifetime', duration: 'lifetime' as const },
   ];
 
-  const isLoadingPage = isUserLoading || reportsLoading;
+  const isLoadingPage = isUserLoading || citizensLoading || reportsLoading;
 
   if (isLoadingPage) {
     return <UserTableSkeleton />;
@@ -268,10 +250,10 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {uniqueCitizenIds.map((citizenId) => (
-                  <CitizenProfile
-                    key={citizenId}
-                    citizenId={citizenId}
+                {citizens?.map((citizen) => (
+                  <UserRow
+                    key={citizen.uid}
+                    citizen={citizen}
                     reports={reports || []}
                     onBan={handleBan}
                     onUnban={handleUnban}
