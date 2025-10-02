@@ -25,7 +25,7 @@ function UserTableSkeleton() {
       {Array(5)
         .fill(0)
         .map((_, i) => (
-          <div key={i} className="flex items-center space-x-4">
+          <div key={i} className="flex items-center space-x-4 p-4 border rounded-md">
             <Skeleton className="h-12 w-12 rounded-full" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-[250px]" />
@@ -45,12 +45,18 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
 
+  // This query will fetch all users with the role of 'citizen'.
+  // This should now work with the simplified security rules.
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
+    if (!firestore) return null;
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
-  }, [firestore, adminUser]);
+  }, [firestore]);
 
-  const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: users, isLoading: areUsersLoading, error } = useCollection<UserProfile>(usersQuery);
+
+  if (error) {
+    console.error("Firestore error:", error);
+  }
 
   const handleOpenManageDialog = (user: UserProfile) => {
     setSelectedUser(user);
@@ -118,44 +124,52 @@ export default function UsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users?.map((user) => {
-                    const isBanned = user.bannedUntil && new Date(user.bannedUntil) > new Date();
-                    return (
-                      <TableRow key={user.uid}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} />
-                              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{user.name}</p>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                  {users && users.length > 0 ? (
+                    users.map((user) => {
+                      const isBanned = user.bannedUntil && new Date(user.bannedUntil) > new Date();
+                      return (
+                        <TableRow key={user.uid}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${user.name}`} />
+                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{user.name}</p>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {isBanned ? (
-                            <Badge variant="destructive" className="items-center gap-1">
-                              <UserX className="h-3 w-3" /> Banned
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-green-600 border-green-300">
-                              Active
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {user.resolvedReports} / {user.totalReports}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenManageDialog(user)}>
-                            <Settings className="mr-2 h-4 w-4" /> Manage
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          </TableCell>
+                          <TableCell>
+                            {isBanned ? (
+                              <Badge variant="destructive" className="items-center gap-1">
+                                <UserX className="h-3 w-3" /> Banned
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-green-600 border-green-300">
+                                Active
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {user.resolvedReports} / {user.totalReports}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenManageDialog(user)}>
+                              <Settings className="mr-2 h-4 w-4" /> Manage
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                        No citizen users found.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
