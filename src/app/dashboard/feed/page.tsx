@@ -14,7 +14,7 @@ import { ThumbsUp, Eye } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog } from '@/components/ui/dialog';
 import ReportDetailsDialog from '@/components/dashboard/ReportDetailsDialog';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -52,8 +52,7 @@ function FeedSkeleton() {
 }
 
 export default function CommunityFeedPage() {
-    const { user, isLoading: isUserLoading } = useAuth();
-    const firestore = useFirestore();
+    const { user, isLoading: isUserLoading, firestore } = useAuth();
 
     const reportsQuery = useMemoFirebase(() => {
         if (!firestore) return null;

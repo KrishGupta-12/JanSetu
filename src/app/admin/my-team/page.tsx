@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
@@ -49,9 +49,8 @@ function TeamTableSkeleton() {
 }
 
 export default function MyTeamPage() {
-  const { user: adminData, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
   useEffect(() => {
     if (!isUserLoading && (!adminData || !adminData.role || !isDepartmentAdmin(adminData.role))) {

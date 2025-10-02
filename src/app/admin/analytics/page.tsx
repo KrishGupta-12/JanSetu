@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { useMemo } from 'react';
 import { differenceInDays, subDays } from 'date-fns';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: 'hsl(var(--chart-1))',
@@ -27,7 +28,7 @@ const categoryColors: {[key in ReportCategory]: string} = {
 
 
 export default function AnalyticsPage() {
-    const firestore = useFirestore();
+    const { firestore } = useAuth();
 
     const reportsQuery = useMemoFirebase(() => {
         if (!firestore) return null;

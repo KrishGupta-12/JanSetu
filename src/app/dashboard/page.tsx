@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -19,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ReportStatus, AdminRole } from '@/lib/types';
 import { Files, Megaphone, Trophy } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 
 
@@ -34,9 +35,8 @@ const statusStyles: { [key in ReportStatus]: string } = {
 
 
 export default function DashboardPage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
   const userReportsQuery = useMemoFirebase(
     () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid), limit(2)) : null,

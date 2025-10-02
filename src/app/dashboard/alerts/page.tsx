@@ -1,12 +1,14 @@
+
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { Alert as AlertType, AlertLevel } from '@/lib/types';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { Info, TriangleAlert, Siren, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 const levelStyles: Record<AlertLevel, string> = {
   Info: 'border-blue-500/50 bg-blue-50 dark:bg-blue-900/20',
@@ -50,7 +52,7 @@ function AlertsSkeleton() {
 }
 
 export default function AlertsPage() {
-  const firestore = useFirestore();
+  const { firestore } = useAuth();
   const alertsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alerts'), orderBy('publishDate', 'desc'));

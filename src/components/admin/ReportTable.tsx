@@ -53,9 +53,10 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useAuth } from '@/hooks/useAuth';
 
 
 const statusStyles: { [key in ReportStatus]: string } = {
@@ -108,7 +109,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const [categoryFilter, setCategoryFilter] = useState<ReportCategory | 'all'>('all');
 
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { firestore } = useAuth();
 
   const adminsQuery = useMemoFirebase(() => {
     if (!firestore) return null;

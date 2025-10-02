@@ -2,10 +2,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { useFirebase } from '@/firebase';
+import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, Auth } from 'firebase/auth';
+import { doc, setDoc, getDoc, Firestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 import { UserProfile, ReportCategory, UserRole } from '@/lib/types';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 const getDepartmentFromRole = (role: UserRole): ReportCategory | undefined => {
     switch (role) {
@@ -29,6 +30,8 @@ interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
+  auth: Auth;
+  firestore: Firestore;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signup: (data: SignupData) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
@@ -40,10 +43,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [services, setServices] = useState<{auth: Auth, firestore: Firestore} | null>(null);
+  const [servicesLoading, setServicesLoading] = useState(true);
 
-  const { auth, firestore } = useFirebase();
+  useEffect(() => {
+    const { auth, firestore } = initializeFirebase();
+    setServices({ auth, firestore });
+    setServicesLoading(false);
+  }, []);
 
-  const fetchUserProfile = useCallback(async (fbUser: FirebaseUser) => {
+  const fetchUserProfile = useCallback(async (fbUser: FirebaseUser, firestore: Firestore) => {
       const userDocRef = doc(firestore, 'users', fbUser.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
@@ -55,17 +64,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         // This case can happen if the user record is deleted from Firestore but not Auth
         console.warn(`No user profile found for UID: ${fbUser.uid}. Logging out.`);
-        signOut(auth);
+        if (services) {
+          signOut(services.auth);
+        }
       }
-  }, [firestore, auth]);
+  }, [services]);
 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    if (!services) return;
+    
+    const unsubscribe = onAuthStateChanged(services.auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
         setIsLoading(true);
-        await fetchUserProfile(fbUser);
+        await fetchUserProfile(fbUser, services.firestore);
         setIsLoading(false);
       } else {
         setUser(null);
@@ -74,7 +87,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [auth, fetchUserProfile]);
+  }, [services, fetchUserProfile]);
+  
+  if (servicesLoading || !services) {
+    return null; // Or a full-page loader
+  }
+  
+  const { auth, firestore } = services;
 
   const createUserProfile = async (
     fbUser: FirebaseUser,
@@ -125,7 +144,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, firebaseUser, isLoading, auth, firestore, login, signup, logout }}>
+      <FirebaseErrorListener />
       {children}
     </AuthContext.Provider>
   );

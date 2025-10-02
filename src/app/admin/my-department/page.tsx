@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Star } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { differenceInDays } from 'date-fns';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
@@ -25,9 +25,8 @@ const statusColors: {[key in ReportStatus]: string} = {
 
 
 export default function MyDepartmentPage() {
-  const { user: adminData, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
   const reportsQuery = useMemoFirebase(() => {
     if (!firestore || !adminData || !adminData.uid || !adminData.role || !isDepartmentAdmin(adminData.role)) return null;

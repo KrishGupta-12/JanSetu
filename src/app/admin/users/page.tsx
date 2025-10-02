@@ -31,7 +31,7 @@ import { ShieldAlert, MoreHorizontal, Ban, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { add } from 'date-fns';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -79,9 +79,8 @@ function UserTableSkeleton() {
 
 
 export default function UsersPage() {
-  const { user: adminUser, isLoading: isUserLoading } = useAuth();
+  const { user: adminUser, isLoading: isUserLoading, firestore } = useAuth();
   const { toast } = useToast();
-  const firestore = useFirestore();
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;

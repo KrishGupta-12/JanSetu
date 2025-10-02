@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReportDetailsDialog from '@/components/dashboard/ReportDetailsDialog';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -36,10 +36,9 @@ const statusStyles: { [key in ReportStatus]: string } = {
 
 
 export default function MyReportsPage() {
-    const { user, isLoading: isUserLoading } = useAuth();
+    const { user, isLoading: isUserLoading, firestore } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const firestore = useFirestore();
 
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);

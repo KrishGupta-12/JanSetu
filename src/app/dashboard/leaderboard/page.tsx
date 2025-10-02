@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth';
 
 type LeaderboardEntry = {
   citizen: UserProfile;
@@ -62,7 +63,7 @@ function LeaderboardSkeleton() {
 
 
 export default function LeaderboardPage() {
-    const firestore = useFirestore();
+    const { firestore } = useAuth();
 
     const citizensQuery = useMemoFirebase(() => {
       if (!firestore) return null;

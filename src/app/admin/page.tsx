@@ -10,15 +10,14 @@ import { ListChecks, Hourglass, Loader, FileText, Siren } from 'lucide-react';
 import ReportTable from '@/components/admin/ReportTable';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
 
 export default function AdminDashboardPage() {
-  const { user: adminData, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
   
   useEffect(() => {
     if (!isUserLoading && (!adminData || !adminData.role)) {

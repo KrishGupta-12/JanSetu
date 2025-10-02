@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star, Mail, Phone, Calendar, Home } from 'lucide-react';
 import { Report, ReportStatus, UserRole } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 
@@ -45,9 +45,8 @@ const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string,
 
 
 export default function ProfilePage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
   const userReportsQuery = useMemoFirebase(
     () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,

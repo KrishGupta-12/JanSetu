@@ -1,3 +1,4 @@
+
 'use client';
 import ReportTable from '@/components/admin/ReportTable';
 import { useAuth } from '@/hooks/useAuth';
@@ -5,14 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Report, ReportStatus, AdminRole } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 
 
 export default function AdminReportsPage() {
-  const { user: adminData, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading, firestore } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
    useEffect(() => {
     if (!isUserLoading && (!adminData || adminData.role !== AdminRole.SuperAdmin)) {

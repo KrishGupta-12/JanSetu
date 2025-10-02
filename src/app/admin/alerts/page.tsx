@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Megaphone, Info, TriangleAlert, Siren } from 'lucide-react';
 import { Alert as AlertType, AlertLevel } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,9 +60,8 @@ function AlertSkeleton() {
 }
 
 export default function AdminAlertsPage() {
-  const { user: adminUser, isLoading: isUserLoading } = useAuth();
+  const { user: adminUser, isLoading: isUserLoading, firestore } = useAuth();
   const { toast } = useToast();
-  const firestore = useFirestore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
