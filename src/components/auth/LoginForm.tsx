@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { UserRole } from '@/lib/types';
 
 
 const formSchema = z.object({
@@ -70,7 +71,9 @@ export function LoginForm() {
     // This effect will run when the user state changes after a successful login.
     useEffect(() => {
         if (user) {
-            if (user.role) {
+            if (user.role === UserRole.SuperAdmin) {
+                router.push('/super_admin');
+            } else if (user.role !== UserRole.Citizen) {
                 router.push('/admin');
             } else {
                 router.push('/dashboard');
