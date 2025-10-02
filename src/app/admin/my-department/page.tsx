@@ -5,7 +5,7 @@ import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Report, ReportStatus, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ListChecks, Hourglass, Loader, FileText, IndianRupee, Star } from 'lucide-react';
+import { ListChecks, Hourglass, Loader, FileText, Star } from 'lucide-react';
 import { mockReports, mockAdmins } from '@/lib/data';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { differenceInDays } from 'date-fns';
@@ -146,10 +146,10 @@ export default function MyDepartmentPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Spending</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            <p className="text-2xl font-bold">Rs.</p>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{departmentStats.totalCost.toLocaleString()}</div>
+            <div className="text-2xl font-bold">Rs.{departmentStats.totalCost.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>

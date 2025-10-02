@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Table,
@@ -41,8 +41,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star } from 'lucide-react';
-import type { Report, Admin, Resolution } from '@/lib/types';
+import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle } from 'lucide-react';
+import type { Report, Admin, Resolution, ReportUrgency } from '@/lib/types';
 import { ReportStatus, AdminRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
@@ -51,6 +51,7 @@ import { mockAdmins } from '@/lib/data';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -60,6 +61,20 @@ const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.PendingCitizenFeedback]: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700',
   [ReportStatus.PendingApproval]: 'bg-pink-100 text-pink-800 border-pink-300 dark:bg-pink-900/50 dark:text-pink-300 dark:border-pink-700',
 };
+
+const urgencyStyles: { [key in ReportUrgency]: string } = {
+    'Low': 'bg-gray-100 text-gray-800 border-gray-300',
+    'Medium': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    'High': 'bg-orange-100 text-orange-800 border-orange-300',
+    'Critical': 'bg-red-100 text-red-800 border-red-300',
+}
+
+const urgencyIcons: { [key in ReportUrgency]: React.ReactNode } = {
+    'Low': <LucideCircle className="h-3 w-3" />,
+    'Medium': <Triangle className="h-3 w-3" />,
+    'High': <Square className="h-3 w-3" />,
+    'Critical': <Siren className="h-3 w-3" />,
+}
 
 const StarRating = ({ rating, setRating, disabled }: { rating: number, setRating?: (r: number) => void, disabled?: boolean }) => (
     <div className="flex gap-1">
@@ -85,22 +100,34 @@ export default function ReportTable({ reports: initialReports, admin }: { report
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [isResolutionFormOpen, setIsResolutionFormOpen] = useState(false);
+  const [urgencyFilter, setUrgencyFilter] = useState<ReportUrgency | 'all'>('all');
   
   const { toast } = useToast();
 
   const allAdmins = mockAdmins;
+
+  const filteredReports = useMemo(() => {
+    if (urgencyFilter === 'all') return reports;
+    return reports.filter(r => r.urgency === urgencyFilter);
+  }, [reports, urgencyFilter]);
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
-    // This would be an API call in a real app
     setReports(prevReports => prevReports.map(r => r.id === reportId ? {...r, status} : r));
     toast({
       title: 'Status Updated',
       description: `Report status changed to ${status}.`
     });
   }
+  
+  const handleUpdateUrgency = (reportId: string, urgency: ReportUrgency) => {
+    setReports(prevReports => prevReports.map(r => r.id === reportId ? {...r, urgency} : r));
+    toast({
+      title: 'Urgency Updated',
+      description: `Report urgency changed to ${urgency}.`
+    });
+  }
 
   const handleAssignAdmin = (reportId: string, admin: Admin) => {
-    // This would be an API call in a real app
      setReports(prevReports => prevReports.map(r => r.id === reportId ? {
         ...r, 
         assignedAdminId: admin.id,
@@ -171,31 +198,50 @@ export default function ReportTable({ reports: initialReports, admin }: { report
      setIsDetailViewOpen(false);
   }
 
+  const urgencyLevels: ReportUrgency[] = ['Low', 'Medium', 'High', 'Critical'];
+
 
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
-            {admin.role === AdminRole.SuperAdmin ? 'All Reports' : 'Assigned Reports'}
-          </CardTitle>
-          {admin.role === AdminRole.SuperAdmin && (
-            <Button onClick={handleGenerateSummary} disabled={isSummaryLoading}>
-              {isSummaryLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              Generate Summary
-            </Button>
-          )}
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle>
+              {admin.role === AdminRole.SuperAdmin ? 'Reports' : 'Assigned Reports'}
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            {admin.role === AdminRole.DepartmentAdmin && (
+              <Select value={urgencyFilter} onValueChange={(value) => setUrgencyFilter(value as any)}>
+                  <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by urgency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="all">All Urgencies</SelectItem>
+                      {urgencyLevels.map(level => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+            )}
+            {admin.role === AdminRole.SuperAdmin && reports.length > 0 && (
+              <Button onClick={handleGenerateSummary} disabled={isSummaryLoading}>
+                {isSummaryLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Generate Summary
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead>ID / Urgency</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Assigned To</TableHead>
@@ -205,9 +251,17 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reports.map((report) => (
+                {filteredReports.map((report) => (
                   <TableRow key={report.id}>
-                    <TableCell className="font-medium">{report.id.substring(0, 7)}...</TableCell>
+                    <TableCell className="font-medium">
+                        <div>{report.id.substring(0, 7)}...</div>
+                        {report.urgency && (
+                            <Badge className={cn('font-semibold gap-1 pl-1.5', urgencyStyles[report.urgency])}>
+                                {urgencyIcons[report.urgency]}
+                                {report.urgency}
+                            </Badge>
+                        )}
+                    </TableCell>
                     <TableCell>{report.category}</TableCell>
                     <TableCell className="max-w-xs truncate">{report.description}</TableCell>
                     <TableCell>{report.assignedAdminName || 'Unassigned'}</TableCell>
@@ -235,6 +289,7 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {admin.role === AdminRole.SuperAdmin ? (
+                           <>
                             <DropdownMenuSub>
                               <DropdownMenuSubTrigger>
                                 <UserCheck className="mr-2 h-4 w-4" />
@@ -248,6 +303,20 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                                 ))}
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <Siren className="mr-2 h-4 w-4" />
+                                Set Urgency
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                {urgencyLevels.map(level => (
+                                  <DropdownMenuItem key={level} onClick={() => handleUpdateUrgency(report.id, level)}>
+                                    {level}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                           </>
                           ) : (
                             <>
                               <DropdownMenuItem 
@@ -307,8 +376,19 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                             <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge className={cn('font-semibold !mt-1 w-fit', statusStyles[selectedReport.status])}>{selectedReport.status}</Badge></div>
                             <div><p className="text-sm font-medium text-muted-foreground">Category</p><p className="text-sm">{selectedReport.category}</p></div>
                             <div><p className="text-sm font-medium text-muted-foreground">Reported</p><p className="text-sm">{new Date(selectedReport.reportDate).toLocaleString()}</p></div>
+                             <div>
+                                <p className="text-sm font-medium text-muted-foreground">Urgency</p>
+                                {selectedReport.urgency ? (
+                                    <Badge className={cn('font-semibold !mt-1 w-fit gap-1 pl-1.5', urgencyStyles[selectedReport.urgency])}>
+                                        {urgencyIcons[selectedReport.urgency]}
+                                        {selectedReport.urgency}
+                                    </Badge>
+                                ) : (
+                                    <p className="text-sm">Not set</p>
+                                )}
+                             </div>
                             <div><p className="text-sm font-medium text-muted-foreground">Assigned To</p><p className="text-sm">{selectedReport.assignedAdminName || 'Unassigned'}</p></div>
-                            <div className="col-span-2"><p className="text-sm font-medium text-muted-foreground">Location</p><a href={`https://www.google.com/maps/search/?api=1&query=${selectedReport.latitude},${selectedReport.longitude}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{selectedReport.latitude}, {selectedReport.longitude}</a></div>
+                            <div className="col-span-1"><p className="text-sm font-medium text-muted-foreground">Location</p><a href={`https://www.google.com/maps/search/?api=1&query=${selectedReport.latitude},${selectedReport.longitude}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{selectedReport.latitude}, {selectedReport.longitude}</a></div>
                             <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Description</p><p className="text-sm">{selectedReport.description}</p></div>
                         </div>
                         {selectedReport.imageUrl && (
@@ -327,7 +407,7 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                             <div className="grid grid-cols-3 gap-4">
                                 <div><p className="text-sm font-medium text-muted-foreground">Resolved By</p><p className="text-sm">{selectedReport.resolution.adminName}</p></div>
                                 <div><p className="text-sm font-medium text-muted-foreground">Date</p><p className="text-sm">{new Date(selectedReport.resolution.date).toLocaleString()}</p></div>
-                                <div><p className="text-sm font-medium text-muted-foreground">Cost</p><p className="text-sm font-bold">₹{selectedReport.resolution.cost.toLocaleString()}</p></div>
+                                <div><p className="text-sm font-medium text-muted-foreground">Cost</p><p className="text-sm font-bold">Rs.{selectedReport.resolution.cost.toLocaleString()}</p></div>
                                 <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Summary</p><p className="text-sm">{selectedReport.resolution.summary}</p></div>
                                 <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Cost Breakdown</p><p className="text-sm whitespace-pre-wrap">{selectedReport.resolution.costBreakdown}</p></div>
                             </div>
@@ -429,13 +509,13 @@ function ResolutionForm({ report, admin, onClose, onSave }: { report: Report | n
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="cost">Total Cost (₹)</Label>
+                        <Label htmlFor="cost">Total Cost (Rs.)</Label>
                         <Input id="cost" type="number" value={cost} onChange={e => setCost(Number(e.target.value))}/>
                     </div>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="costBreakdown">Cost Breakdown</Label>
-                    <Textarea id="costBreakdown" value={costBreakdown} onChange={e => setCostBreakdown(e.target.value)} placeholder="e.g., Materials: ₹500, Labor: ₹1000"/>
+                    <Textarea id="costBreakdown" value={costBreakdown} onChange={e => setCostBreakdown(e.target.value)} placeholder="e.g., Materials: Rs.500, Labor: Rs.1000"/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="afterImage">"After" Photo URL (Optional)</Label>

@@ -15,6 +15,8 @@ export enum ReportStatus {
   PendingCitizenFeedback = 'Pending Citizen Feedback', // New status
 }
 
+export type ReportUrgency = 'Low' | 'Medium' | 'High' | 'Critical';
+
 export type Resolution = {
   adminId: string;
   adminName: string;
@@ -40,6 +42,7 @@ export type Report = {
   imageUrl: string;
   reportDate: string; // ISO string
   status: ReportStatus;
+  urgency?: ReportUrgency;
   assignedAdminId?: string;
   assignedAdminName?: string;
   resolution?: Resolution;

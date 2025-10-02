@@ -189,7 +189,7 @@ export default function AnalyticsPage() {
                             <BarChart data={departmentPerformance}>
                                 <XAxis dataKey="department" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={80} />
                                 <YAxis />
-                                <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                                <Tooltip formatter={(value: number) => `Rs.${value.toLocaleString()}`} />
                                 <Bar dataKey="totalCost" name="Total Cost" fill="hsl(var(--chart-4))" />
                             </BarChart>
                         </ResponsiveContainer>

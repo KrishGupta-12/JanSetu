@@ -7,9 +7,13 @@ import {
   LightbulbOff,
   CloudRain,
   HelpCircle,
+  Siren,
+  Triangle,
+  Square,
+  Circle
 } from 'lucide-react';
-import { Report, ReportCategory } from '@/lib/types';
-import { mockAqiSensors, mockReports } from '@/lib/data';
+import { Report, ReportCategory, ReportUrgency } from '@/lib/types';
+import { mockAqiSensors } from '@/lib/data';
 
 
 const ReportIcon = ({ category }: { category: ReportCategory }) => {
@@ -28,10 +32,29 @@ const ReportIcon = ({ category }: { category: ReportCategory }) => {
   }
 };
 
-const MapView = () => {
-  const defaultCenter = { lat: 28.6139, lng: 77.209 };
-  const reports = mockReports;
+const UrgencyIcon = ({ urgency }: { urgency: ReportUrgency }) => {
+    const commonClass = "w-5 h-5";
+    switch (urgency) {
+        case 'Critical': return <Siren className={commonClass} />;
+        case 'High': return <Triangle className={commonClass} />;
+        case 'Medium': return <Square className={commonClass} />;
+        case 'Low': return <Circle className={commonClass} />;
+        default: return <HelpCircle className={commonClass} />;
+    }
+}
 
+const getPinProps = (report: Report) => {
+    switch (report.urgency) {
+        case 'Critical': return { background: '#ef4444', borderColor: '#ef4444', glyphColor: '#fff' }; // red
+        case 'High': return { background: '#f97316', borderColor: '#f97316', glyphColor: '#fff' }; // orange
+        case 'Medium': return { background: '#eab308', borderColor: '#eab308', glyphColor: '#fff' }; // yellow
+        case 'Low': return { background: '#84cc16', borderColor: '#84cc16', glyphColor: '#000' }; // lime
+        default: return { background: '#FF8A65', borderColor: '#FF8A65', glyphColor: '#FFF' }; // default
+    }
+}
+
+const MapView = ({ reports }: { reports?: Report[] }) => {
+  const defaultCenter = { lat: 28.6139, lng: 77.209 };
 
   return (
     <Map
@@ -44,8 +67,8 @@ const MapView = () => {
     >
       {reports?.map((report) => (
         <AdvancedMarker key={report.id} position={{ lat: report.latitude, lng: report.longitude }} title={report.description}>
-          <Pin background={'#FF8A65'} borderColor={'#FF8A65'} glyphColor={'#FFF'}>
-            <ReportIcon category={report.category} />
+          <Pin {...getPinProps(report)}>
+             {report.urgency ? <UrgencyIcon urgency={report.urgency}/> : <ReportIcon category={report.category} />}
           </Pin>
         </AdvancedMarker>
       ))}

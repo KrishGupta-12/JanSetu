@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Home, Users, BarChart, UserCircle, LogOut, Building, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart, UserCircle, LogOut, Building, UserCog, Files } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -19,10 +19,10 @@ import { useMemo } from 'react';
 import { mockAdmins } from '@/lib/data';
 import { AdminRole } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
-import { Button } from '../ui/button';
 
 const allMenuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [AdminRole.SuperAdmin, AdminRole.DepartmentAdmin] },
+  { href: '/admin/reports', label: 'Reports', icon: Files, roles: [AdminRole.SuperAdmin]},
   { href: '/admin/my-department', label: 'My Department', icon: Building, roles: [AdminRole.DepartmentAdmin] },
   { href: '/admin/my-team', label: 'My Team', icon: UserCog, roles: [AdminRole.DepartmentAdmin] },
   { href: '/admin/users', label: 'Users', icon: Users, roles: [AdminRole.SuperAdmin] },
@@ -72,7 +72,7 @@ export default function AdminSidebar() {
                 <SidebarMenuItem key={item.label}>
                 <Link href={item.href} passHref>
                     <SidebarMenuButton
-                    isActive={pathname === item.href}
+                    isActive={pathname.startsWith(item.href) && (item.href !== '/admin' || pathname === '/admin')}
                     tooltip={item.label}
                     as="a"
                     >
@@ -108,13 +108,6 @@ export default function AdminSidebar() {
               <span>Sign Out</span>
             </SidebarMenuButton>
         </SidebarMenuItem>
-        <SidebarSeparator />
-        <Link href="/dashboard" passHref>
-          <SidebarMenuButton tooltip="Back to Dashboard" as="a">
-            <Home />
-            <span>Back to Dashboard</span>
-          </SidebarMenuButton>
-        </Link>
       </SidebarFooter>
     </Sidebar>
   );

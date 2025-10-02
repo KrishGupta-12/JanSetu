@@ -201,7 +201,7 @@ function ReportDetailsDialog({ report, user, onSaveFeedback }: { report: Report 
                         <div className="grid grid-cols-3 gap-4">
                             <div><p className="text-sm font-medium text-muted-foreground">Resolved By</p><p className="text-sm">{report.resolution.adminName}</p></div>
                             <div><p className="text-sm font-medium text-muted-foreground">Date</p><p className="text-sm">{new Date(report.resolution.date).toLocaleString()}</p></div>
-                            <div><p className="text-sm font-medium text-muted-foreground">Cost</p><p className="text-sm font-bold">₹{report.resolution.cost.toLocaleString()}</p></div>
+                            <div><p className="text-sm font-medium text-muted-foreground">Cost</p><p className="text-sm font-bold">Rs.{report.resolution.cost.toLocaleString()}</p></div>
                             <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Summary</p><p className="text-sm">{report.resolution.summary}</p></div>
                         </div>
                          {report.resolution.afterImageUrl && (
