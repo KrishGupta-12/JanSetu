@@ -1,6 +1,7 @@
+
 'use client';
 
-import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
+import { UserProfile, UserRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -25,7 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ShieldAlert, MoreHorizontal, Ban, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +34,7 @@ import { add } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useRouter } from 'next/navigation';
 
 type EnrichedCitizen = UserProfile & {
   isBanned: boolean;
@@ -149,6 +151,13 @@ function UserRow({ citizen, onBan, onUnban, banDurations }: { citizen: EnrichedC
 export default function UsersPage() {
   const { user: adminUser, isLoading: isUserLoading, firestore } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && (!adminUser || adminUser.role !== UserRole.SuperAdmin)) {
+      router.push('/admin'); 
+    }
+  }, [adminUser, isUserLoading, router]);
   
   const citizensQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) {
@@ -205,7 +214,7 @@ export default function UsersPage() {
 
   const isLoadingPage = isUserLoading || citizensLoading;
 
-  if (isLoadingPage) {
+  if (isLoadingPage || !adminUser) {
     return <UserTableSkeleton />;
   }
   
