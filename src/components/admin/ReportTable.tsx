@@ -228,11 +228,12 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                 <>
                 <DialogHeader>
                     <DialogTitle>Report Details</DialogTitle>
-                     <DialogDescription>
-                        <Badge className={cn('font-semibold mt-2', statusStyles[selectedReport.status])}>
-                            {selectedReport.status}
-                        </Badge>
+                    <DialogDescription>
+                        Full details for report ID {selectedReport.id.substring(0,7)}.
                      </DialogDescription>
+                     <Badge className={cn('font-semibold !mt-2 w-fit', statusStyles[selectedReport.status])}>
+                        {selectedReport.status}
+                    </Badge>
                 </DialogHeader>
                  <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
