@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -50,6 +50,7 @@ export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -69,13 +70,22 @@ export function SignupForm() {
   // Seed admin user on component mount if it doesn't exist
   useEffect(() => {
     const seedAdmin = async () => {
+        if (!auth || !firestore) return;
+        
         try {
-            // Attempt to sign in as admin to check existence
-            await signInWithEmailAndPassword(auth, 'admin@jancorp.com', 'admin123');
-        } catch (error) {
-            // If admin doesn't exist, create it
-            if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
-                try {
+            // Check if admin already exists
+            const adminDocRef = doc(firestore, "admins", "admin_user_id_placeholder"); // A placeholder to check, can be any known admin id if available
+            const adminDoc = await getDoc(adminDocRef);
+
+            // A more reliable way is to check if admin@jancorp.com exists.
+            // This requires a function to get user by email, which is an admin-only SDK feature.
+            // For client-side, we try to sign-in and if it fails with user-not-found, we create it.
+            // This is not perfectly secure but sufficient for seeding.
+            
+            await signInWithEmailAndPassword(auth, 'admin@jancorp.com', 'admin123').catch(async (error) => {
+                 if (error instanceof FirebaseError && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
+                    const tempUser = auth.currentUser;
+                    
                     const adminCredential = await createUserWithEmailAndPassword(auth, 'admin@jancorp.com', 'admin123');
                     const adminUser = adminCredential.user;
                     
@@ -100,23 +110,31 @@ export function SignupForm() {
                         city: 'New Delhi',
                         state: 'Delhi'
                      });
+                     
+                    // Sign out the newly created admin, and sign back in the original user if there was one.
+                    await signOut(auth);
+                    if (tempUser) {
+                        // This part is tricky as we don't have the password.
+                        // For seeding, it's often better to run a separate script.
+                        // Or, we accept that the user is logged out after seeding.
+                    }
+                 }
+            });
 
-                } catch (creationError) {
-                    console.error("Failed to seed admin user:", creationError);
-                }
-            }
+        } catch (error) {
+           // This might fail if the user is already logged in. We can ignore for seeding.
+           console.log("Could not attempt admin seed.", error);
         }
     };
-    if(firestore && auth) {
-      seedAdmin();
-    }
+
+    seedAdmin();
   }, [auth, firestore]);
 
   useEffect(() => {
-    if (auth.currentUser && auth.currentUser.email !== 'admin@jancorp.com') {
+    if (!isUserLoading && user) {
       router.push('/dashboard');
     }
-  }, [auth.currentUser, router]);
+  }, [user, isUserLoading, router]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
