@@ -1,3 +1,4 @@
+
 'use client';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -5,10 +6,13 @@ import { useState, useEffect } from 'react';
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  // It's important to access environment variables only on the client-side for `NEXT_PUBLIC_` vars
+  // to be available after the initial server render.
+  const [apiKey, setApiKey] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setIsClient(true);
+    setApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   }, []);
 
   if (!isClient) {
