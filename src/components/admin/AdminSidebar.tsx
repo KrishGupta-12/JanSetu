@@ -17,7 +17,7 @@ import {
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemo } from 'react';
-import { UserRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
+import { UserRole, DepartmentAdminRoles } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
 const isDepartmentAdmin = (role: UserRole) => DepartmentAdminRoles.includes(role);
@@ -50,7 +50,11 @@ export default function AdminSidebar() {
 
   const menuItems = useMemo(() => {
       if (!adminData || !adminData.role) return [];
-      return allMenuItems.filter(item => item.roles.includes(adminData.role!));
+      const userRoles = [adminData.role];
+      if(adminData.role === UserRole.SuperAdmin){
+        userRoles.push(...DepartmentAdminRoles);
+      }
+      return allMenuItems.filter(item => item.roles.some(r => userRoles.includes(r)));
   }, [adminData]);
 
   const handleSignOut = () => {
@@ -71,7 +75,7 @@ export default function AdminSidebar() {
                 <SidebarMenuItem key={item.label}>
                 <Link href={item.href} passHref>
                     <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href) && (item.href !== '/admin' || pathname === '/admin')}
+                    isActive={pathname === item.href}
                     tooltip={item.label}
                     as="a"
                     >

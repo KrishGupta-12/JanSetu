@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Megaphone, Info, TriangleAlert, Siren } from 'lucide-react';
-import { Alert as AlertType, AlertLevel } from '@/lib/types';
+import { Alert as AlertType, UserRole } from '@/lib/types';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -19,6 +19,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+type AlertLevel = 'Info' | 'Warning' | 'Critical';
 
 const alertLevelOptions: AlertLevel[] = ['Info', 'Warning', 'Critical'];
 
@@ -96,7 +98,7 @@ export default function AdminAlertsPage() {
       adminName: adminUser.name,
     };
     
-    addDocumentNonBlocking(alertsCollection, newAlert);
+    await addDocumentNonBlocking(alertsCollection, newAlert);
 
     toast({
       title: 'Alert Published',
