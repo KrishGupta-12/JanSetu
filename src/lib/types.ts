@@ -48,6 +48,7 @@ export type Citizen = {
     address?: string;
     city?: string;
     state?: string;
+    bannedUntil?: string | 'lifetime' | null; // ISO string, 'lifetime', or null
 }
 
 export enum AdminRole {
@@ -80,4 +81,5 @@ export type User = {
   state?: string;
   role?: AdminRole;
   department?: ReportCategory;
+  bannedUntil?: string | 'lifetime' | null;
 }

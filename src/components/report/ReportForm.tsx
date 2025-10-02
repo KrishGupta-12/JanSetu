@@ -4,7 +4,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { MapPin, Image as ImageIcon, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { MapPin, Image as ImageIcon, Loader2, CheckCircle, AlertCircle, Ban } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { submitReport, type FormState } from '@/lib/actions';
 import { ReportCategory } from '@/lib/types';
@@ -76,6 +77,13 @@ export default function ReportForm() {
   );
   const [locationError, setLocationError] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  
+  const isBanned = useMemo(() => {
+    if (!user || !user.bannedUntil) return false;
+    if (user.bannedUntil === 'lifetime') return true;
+    return new Date(user.bannedUntil) > new Date();
+  }, [user]);
+
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
@@ -148,6 +156,19 @@ export default function ReportForm() {
 
   if (isUserLoading || !user) {
       return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin"/></div>
+  }
+
+  if (isBanned) {
+      return (
+          <Alert variant="destructive">
+            <Ban className="h-4 w-4" />
+            <AlertTitle>Account Suspended</AlertTitle>
+            <AlertDescription>
+                Your account is currently suspended from submitting new reports.
+                {user.bannedUntil !== 'lifetime' && ` This suspension will be lifted on ${new Date(user.bannedUntil!).toLocaleDateString()}.`}
+            </AlertDescription>
+          </Alert>
+      )
   }
 
   return (
