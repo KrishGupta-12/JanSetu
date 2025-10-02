@@ -36,10 +36,11 @@ export type Resolution = {
 export type Report = {
   id: string;
   citizenId: string;
+  complainantName: string;
+  complainantPhone: string;
+  locationAddress: string;
   category: ReportCategory;
   description: string;
-  latitude: number;
-  longitude: number;
   imageUrl: string;
   reportDate: string; 
   status: ReportStatus;

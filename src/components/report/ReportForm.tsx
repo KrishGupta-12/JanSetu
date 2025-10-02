@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState } from 'react';
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { MapPin, Image as ImageIcon, Loader2, CheckCircle, AlertCircle, Ban } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Ban } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { submitReport, type FormState } from '@/lib/actions';
@@ -32,8 +33,9 @@ const reportFormSchema = z.object({
   description: z.string().min(10, {
     message: 'Description must be at least 10 characters.',
   }),
-  latitude: z.string().min(1, { message: 'Location is required.' }),
-  longitude: z.string().min(1, { message: 'Location is required.' }),
+  complainantName: z.string().min(1, { message: 'Name is required.' }),
+  complainantPhone: z.string().min(1, { message: 'Phone number is required.' }),
+  locationAddress: z.string().min(1, { message: 'Address is required.' }),
   photo: z.string().optional(),
   citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
@@ -62,10 +64,6 @@ export default function ReportForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>(
-    'idle'
-  );
-  const [locationError, setLocationError] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   
   const isBanned = useMemo(() => {
@@ -79,8 +77,9 @@ export default function ReportForm() {
     resolver: zodResolver(reportFormSchema),
     defaultValues: {
       description: '',
-      latitude: '',
-      longitude: '',
+      complainantName: user?.name || '',
+      complainantPhone: user?.phone || '',
+      locationAddress: user?.address || '',
       citizenId: user?.uid || '',
     },
   });
@@ -88,6 +87,9 @@ export default function ReportForm() {
   useEffect(() => {
     if (user) {
       form.setValue('citizenId', user.uid);
+      form.setValue('complainantName', user.name);
+      form.setValue('complainantPhone', user.phone);
+      form.setValue('locationAddress', user.address);
     }
   }, [user, form]);
 
@@ -110,7 +112,6 @@ export default function ReportForm() {
       });
       form.reset();
       setPhotoPreview(null);
-      setLocationStatus('idle');
       formRef.current?.reset();
       router.push('/dashboard/my-reports');
     } else if (formState.status === 'error') {
@@ -121,22 +122,6 @@ export default function ReportForm() {
       });
     }
   }, [formState, toast, form, router]);
-
-  const handleGetLocation = () => {
-    setLocationStatus('loading');
-    setLocationError('');
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        form.setValue('latitude', position.coords.latitude.toString());
-        form.setValue('longitude', position.coords.longitude.toString());
-        setLocationStatus('success');
-      },
-      (error) => {
-        setLocationStatus('error');
-        setLocationError(error.message);
-      }
-    );
-  };
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -174,14 +159,56 @@ export default function ReportForm() {
         <form ref={formRef} action={dispatch} className="space-y-8">
            <input type="hidden" {...form.register('citizenId')} />
           
+           <FormField
+            control={form.control}
+            name="complainantName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your full name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="complainantPhone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mobile Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your mobile number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="locationAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location / Address</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter the full address or landmark of the issue." {...field} />
+                </FormControl>
+                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel>Description of Issue</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Tell us more about the issue... The more details you provide, the better our AI can classify it." {...field} />
+                  <Textarea placeholder="Tell us more about the issue..." {...field} />
                 </FormControl>
                 <FormDescription>
                   Our AI will automatically determine the category and urgency based on your description.
@@ -190,34 +217,9 @@ export default function ReportForm() {
               </FormItem>
             )}
           />
-
-          <FormItem>
-            <FormLabel>Location</FormLabel>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={handleGetLocation} disabled={locationStatus === 'loading'}>
-                {locationStatus === 'loading' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <MapPin className="mr-2 h-4 w-4" />
-                )}
-                Use My Location
-              </Button>
-              {locationStatus === 'success' && <CheckCircle className="h-5 w-5 text-green-500" />}
-              {locationStatus === 'error' && <AlertCircle className="h-5 w-5 text-destructive" />}
-            </div>
-            {locationStatus === 'success' && (
-              <FormDescription>Location captured successfully!</FormDescription>
-            )}
-            {locationStatus === 'error' && (
-              <p className="text-sm font-medium text-destructive">{locationError}</p>
-            )}
-            <input type="hidden" {...form.register('latitude')} />
-            <input type="hidden" {...form.register('longitude')} />
-             <FormMessage>{form.formState.errors.latitude?.message}</FormMessage>
-          </FormItem>
           
           <FormItem>
-            <FormLabel>Photo (Optional)</FormLabel>
+            <FormLabel>Photo</FormLabel>
              <FormControl>
                 <div className="relative w-full h-48 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50 hover:border-primary transition-colors">
                     <Input id="photo-upload" type="file" accept="image/*" className="absolute w-full h-full opacity-0 cursor-pointer" onChange={handlePhotoChange} />

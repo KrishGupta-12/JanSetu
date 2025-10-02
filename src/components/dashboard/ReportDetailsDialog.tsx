@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -73,6 +74,7 @@ export default function ReportDetailsDialog({ report, user, onSaveFeedback }: { 
                         <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge className={cn('font-semibold !mt-1 w-fit', statusStyles[report.status])}>{report.status}</Badge></div>
                         <div><p className="text-sm font-medium text-muted-foreground">Category</p><p className="text-sm">{report.category}</p></div>
                         <div><p className="text-sm font-medium text-muted-foreground">Reported</p><p className="text-sm">{new Date(report.reportDate).toLocaleString()}</p></div>
+                        <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Location</p><p className="text-sm">{report.locationAddress}</p></div>
                         <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Description</p><p className="text-sm">{report.description}</p></div>
                     </div>
                     {report.imageUrl && (

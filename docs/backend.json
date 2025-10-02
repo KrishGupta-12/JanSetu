@@ -24,10 +24,11 @@
       "description": "Represents an issue reported by a citizen.",
       "properties": {
         "citizenId": { "type": "string", "description": "The UID of the user who submitted the report." },
+        "complainantName": { "type": "string", "description": "The name of the person who filed the report." },
+        "complainantPhone": { "type": "string", "description": "The phone number of the person who filed the report." },
+        "locationAddress": { "type": "string", "description": "The address or landmark where the issue is located." },
         "category": { "type": "string", "enum": ["Waste Management", "Potholes", "Streetlight Outage", "Water Logging", "Other"] },
         "description": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
         "imageUrl": { "type": "string", "format": "uri" },
         "reportDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Pending", "In Progress", "Resolved", "Rejected", "Pending Approval", "Pending Citizen Feedback"] },
@@ -55,7 +56,7 @@
           "required": ["adminId", "adminName", "date", "summary", "cost", "costBreakdown"]
         }
       },
-      "required": ["citizenId", "category", "description", "latitude", "longitude", "reportDate", "status", "upvotes", "citizenIdsWhoUpvoted"]
+      "required": ["citizenId", "complainantName", "complainantPhone", "locationAddress", "category", "description", "reportDate", "status", "upvotes", "citizenIdsWhoUpvoted"]
     },
     "AdminCredential": {
         "title": "Admin Credential",

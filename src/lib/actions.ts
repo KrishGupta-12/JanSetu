@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -11,8 +12,9 @@ import { Report } from './types';
 
 const reportSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters.'),
-  latitude: z.string(),
-  longitude: z.string(),
+  complainantName: z.string().min(1, 'Name is required.'),
+  complainantPhone: z.string().min(1, 'Phone number is required.'),
+  locationAddress: z.string().min(1, 'Address is required.'),
   photo: z.string().optional(),
   citizenId: z.string().min(1, 'Citizen ID is missing.'),
 });
@@ -28,8 +30,9 @@ export async function submitReport(
 ): Promise<FormState> {
   const validatedFields = reportSchema.safeParse({
     description: formData.get('description'),
-    latitude: formData.get('latitude'),
-    longitude: formData.get('longitude'),
+    complainantName: formData.get('complainantName'),
+    complainantPhone: formData.get('complainantPhone'),
+    locationAddress: formData.get('locationAddress'),
     photo: formData.get('photo'),
     citizenId: formData.get('citizenId'),
   });
@@ -42,7 +45,7 @@ export async function submitReport(
     };
   }
 
-  const { photo, description, citizenId, latitude, longitude } = validatedFields.data;
+  const { photo, description, citizenId, complainantName, complainantPhone, locationAddress } = validatedFields.data;
   const { firestore } = await initializeAdminApp();
 
   try {
@@ -57,13 +60,14 @@ export async function submitReport(
 
     const reportData = {
       citizenId,
+      complainantName,
+      complainantPhone,
+      locationAddress,
       description,
       imageUrl: moderatedPhotoDataUri || '',
       category: classificationResult.category,
       urgency: classificationResult.urgency,
       reportDate: new Date().toISOString(),
-      latitude: parseFloat(latitude),
-      longitude: parseFloat(longitude),
       status: 'Pending',
       upvotes: 0,
       citizenIdsWhoUpvoted: [],
@@ -101,7 +105,7 @@ export async function summarizeAllReports(): Promise<{ summary: string } | { err
       return {
         category: data.category,
         description: data.description,
-        location: `${data.latitude}, ${data.longitude}`,
+        location: data.locationAddress,
       };
     });
     

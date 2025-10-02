@@ -173,7 +173,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
         const reportsForSummary = reports.map(report => ({
             category: report.category,
             description: report.description,
-            location: `${report.latitude}, ${report.longitude}`,
+            location: report.locationAddress,
         }));
         const result = await summarizeReports({ reports: reportsForSummary });
         setSummary(result.summary);
@@ -441,7 +441,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                                 )}
                              </div>
                             <div><p className="text-sm font-medium text-muted-foreground">Assigned To</p><p className="text-sm">{selectedReport.assignedAdminName || 'Unassigned'}</p></div>
-                            <div className="col-span-1"><p className="text-sm font-medium text-muted-foreground">Location</p><a href={`https://www.google.com/maps/search/?api=1&query=${selectedReport.latitude},${selectedReport.longitude}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{selectedReport.latitude}, {selectedReport.longitude}</a></div>
+                            <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Location</p><p className="text-sm">{selectedReport.locationAddress}</p></div>
                             <div className="col-span-3"><p className="text-sm font-medium text-muted-foreground">Description</p><p className="text-sm">{selectedReport.description}</p></div>
                         </div>
                         {selectedReport.imageUrl && (
@@ -571,7 +571,7 @@ function ResolutionForm({ report, admin, onClose, onSave }: { report: Report | n
                     <Textarea id="costBreakdown" value={costBreakdown} onChange={e => setCostBreakdown(e.target.value)} placeholder="e.g., Materials: Rs.500, Labor: Rs.1000"/>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="afterImage">"After" Photo URL (Optional)</Label>
+                    <Label htmlFor="afterImage">"After" Photo URL</Label>
                     <Input id="afterImage" value={afterImageUrl} onChange={e => setAfterImageUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
                 </div>
             </div>
