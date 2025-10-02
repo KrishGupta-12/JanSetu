@@ -1,6 +1,6 @@
 
 'use client'
-import { Report, ReportCategory, ReportStatus, AdminRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
+import { Report, ReportCategory, ReportStatus, UserRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { useMemo } from 'react';

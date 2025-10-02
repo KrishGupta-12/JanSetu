@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Report, ReportStatus, AdminRole, DepartmentAdminRoles } from '@/lib/types';
+import { Report, ReportStatus, UserRole, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Siren } from 'lucide-react';
 import ReportTable from '@/components/admin/ReportTable';
@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
-const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
+const isDepartmentAdmin = (role: UserRole) => DepartmentAdminRoles.includes(role);
 
 export default function AdminDashboardPage() {
   const { user: adminData, isLoading: isUserLoading, firestore } = useAuth();
@@ -27,7 +27,7 @@ export default function AdminDashboardPage() {
 
   const reportsQuery = useMemoFirebase(() => {
     if (!firestore || !adminData) return null;
-    if (adminData.role === AdminRole.SuperAdmin) {
+    if (adminData.role === UserRole.SuperAdmin) {
       return query(collection(firestore, 'issueReports'));
     } else if (adminData.role && isDepartmentAdmin(adminData.role)) {
       return query(collection(firestore, 'issueReports'), where('assignedAdminId', '==', adminData.uid));

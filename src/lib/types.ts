@@ -1,5 +1,6 @@
 
 
+
 export enum ReportCategory {
   Waste = 'Waste Management',
   Pothole = 'Potholes',
@@ -89,7 +90,7 @@ export enum UserRole {
     Citizen = 'citizen',
 }
 
-export const DepartmentAdminRoles = [
+export const DepartmentAdminRoles: UserRole[] = [
   UserRole.WasteAdmin,
   UserRole.PotholeAdmin,
   UserRole.StreetlightAdmin,

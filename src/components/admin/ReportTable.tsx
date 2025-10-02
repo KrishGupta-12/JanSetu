@@ -44,7 +44,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MoreHorizontal, Loader2, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle, ThumbsUp } from 'lucide-react';
 import type { Report, UserProfile, Resolution, ReportUrgency, ReportCategory } from '@/lib/types';
-import { ReportStatus, AdminRole, DepartmentAdminRoles } from '@/lib/types';
+import { ReportStatus, UserRole, DepartmentAdminRoles } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { reportCategories } from '@/lib/data';
@@ -108,7 +108,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const { firestore } = useAuth();
 
   const adminsQuery = useMemoFirebase(() => {
-    if (!firestore || admin.role !== AdminRole.SuperAdmin) return null;
+    if (!firestore || admin.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'users'));
   }, [firestore, admin.role]);
   const { data: allAdmins } = useCollection<UserProfile>(adminsQuery);
@@ -226,7 +226,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <CardTitle>
-              {admin.role === AdminRole.SuperAdmin ? 'Reports' : 'Assigned Reports'}
+              {admin.role === UserRole.SuperAdmin ? 'Reports' : 'Assigned Reports'}
             </CardTitle>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -242,7 +242,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                 </SelectContent>
             </Select>
 
-            {admin.role === AdminRole.SuperAdmin && (
+            {admin.role === UserRole.SuperAdmin && (
               <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
                   <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by category" />
@@ -316,7 +316,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {admin.role === AdminRole.SuperAdmin ? (
+                          {admin.role === UserRole.SuperAdmin ? (
                            <>
                             <DropdownMenuSub>
                               <DropdownMenuSubTrigger>
@@ -450,7 +450,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                         </div>
                     )}
                     
-                     {admin.role === AdminRole.SuperAdmin && selectedReport.status === ReportStatus.PendingApproval && (
+                     {admin.role === UserRole.SuperAdmin && selectedReport.status === ReportStatus.PendingApproval && (
                         <div className="space-y-4 rounded-lg border p-4">
                              <h4 className="font-semibold text-lg">Super Admin Verdict</h4>
                              <p className="text-sm text-muted-foreground">Provide your feedback and approve the work.</p>

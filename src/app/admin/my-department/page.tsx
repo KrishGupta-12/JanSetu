@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Report, ReportStatus, AdminRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
+import { Report, ReportStatus, UserRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Star } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -12,7 +12,7 @@ import { differenceInDays } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
-const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
+const isDepartmentAdmin = (role: UserRole) => DepartmentAdminRoles.includes(role);
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: 'hsl(var(--chart-1))',

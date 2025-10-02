@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Report, ReportStatus, AdminRole } from '@/lib/types';
+import { Report, ReportStatus, UserRole } from '@/lib/types';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 
@@ -15,13 +15,13 @@ export default function AdminReportsPage() {
   const router = useRouter();
 
    useEffect(() => {
-    if (!isUserLoading && (!adminData || adminData.role !== AdminRole.SuperAdmin)) {
+    if (!isUserLoading && (!adminData || adminData.role !== UserRole.SuperAdmin)) {
       router.push('/admin'); 
     }
   }, [adminData, isUserLoading, router]);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!firestore || !adminData || adminData.role !== AdminRole.SuperAdmin) return null;
+    if (!firestore || !adminData || adminData.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'issueReports'));
   }, [adminData, firestore]);
 

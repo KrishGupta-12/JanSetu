@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { UserProfile, AdminRole, Report, ReportStatus, DepartmentAdminRoles } from '@/lib/types';
+import { UserProfile, UserRole, Report, ReportStatus, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
-const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
+const isDepartmentAdmin = (role: UserRole) => DepartmentAdminRoles.includes(role);
 
 function TeamTableSkeleton() {
     return (
