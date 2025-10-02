@@ -1,164 +1,119 @@
-/**
- * @fileoverview Firestore Security Rules for JanSetu application.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for citizen data and issue reports,
- * with an additional layer of admin-based access control for issue reports. Admin privileges
- * are granted based on the existence of a document in the `/admins/{adminId}` collection.
- *
- * Data Structure:
- * - /citizens/{citizenId}: Stores citizen profile data; accessible only by the citizen themselves.
- * - /admins/{adminId}: Stores admin profile data; existence grants admin privileges.
- * - /issue_reports/{issueReportId}: Stores all issue reports; read-only for all, create for signed-in users, update/delete restricted to admins or the report creator.
- * - /users/{userId}/issue_reports/{issueReportId}: Stores issue reports specific to a given user; accessible only by the user themselves.
- * - /air_quality_sensors/{sensorId}: Stores air quality sensor data; publicly readable.
- * - /disaster_alerts/{alertId}: Stores disaster alert information; publicly readable.
- *
- * Key Security Decisions:
- * - Citizen data is strictly private and only accessible by the authenticated user with a matching ID.
- * - Listing of all citizens is disallowed for privacy.
- * - Admin privileges are determined by the existence of a document in the `/admins/{adminId}` collection.
- * - Issue reports are publicly readable, but creation, update, and deletion are restricted.
- * - Air quality sensor data and disaster alerts are publicly readable.
- *
- * Denormalization for Authorization:
- * - IssueReport documents contain the `citizenId` of the reporter to avoid requiring `get()` calls
- *   on the `/citizens` collection for authorization.
- * - IssueReport documents contain the `assignedAdminId` of the assigned admin to avoid requiring `get()` calls
- *   on the `/admins` collection for authorization.
- *
- * Structural Segregation:
- * - Issue reports are stored in both a top-level collection (`/issue_reports`) for public access
- *   and in user-specific subcollections (`/users/{userId}/issue_reports`) for private, user-owned access.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Protects citizen user data, allowing only the owner to read and write.
+     * @description Controls access to citizen user profiles.
      * @path /citizens/{citizenId}
-     * @allow (create, get, update, delete) if request.auth.uid == citizenId
-     * @deny (create, get, update, delete) if request.auth.uid != citizenId
-     * @principle Enforces document ownership for writes.
+     * @allow (create) User with UID 'test_user' can create their own profile with citizenId 'test_user'.
+     * @allow (get,update,delete) User with UID 'test_user' can read, update, or delete their own profile with citizenId 'test_user'.
+     * @deny (create) User with UID 'test_user' cannot create a profile with citizenId 'another_user'.
+     * @deny (get,update,delete) User with UID 'test_user' cannot read, update, or delete another user's profile with citizenId 'another_user'.
+     * @principle Enforces document ownership for user profiles.
      */
     match /citizens/{citizenId} {
+      // Helper function to check if the request is made by the owner of the document
       function isOwner(citizenId) {
         return request.auth.uid == citizenId;
       }
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      allow get: if isSignedIn() && isOwner(citizenId);
+
+      allow get: if isOwner(citizenId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(citizenId);
-      allow update: if isSignedIn() && isOwner(citizenId);
-      allow delete: if isSignedIn() && isOwner(citizenId);
+      allow create: if isOwner(citizenId);
+      allow update: if isOwner(citizenId);
+      allow delete: if isOwner(citizenId);
     }
 
     /**
-     * @description Protects admin user data. Existence in this collection grants admin privileges.
+     * @description Controls access to admin user profiles. Only admins can manage admin profiles.
      * @path /admins/{adminId}
-     * @allow (create, get, update, delete) if request.auth.uid == adminId
-     * @deny (create, get, update, delete) if request.auth.uid != adminId
-     * @principle Enforces document ownership for writes, implies admin priviledge.
+     * @allow (create) Authenticated admin user can create an admin profile.
+     * @allow (get,update,delete) Authenticated admin user can read, update, or delete an admin profile.
+     * @deny (create) Non-admin user cannot create an admin profile.
+     * @deny (get,update,delete) Non-admin user cannot read, update, or delete an admin profile.
+     * @principle Restricts admin profile management to authenticated admins only.
      */
     match /admins/{adminId} {
-      function isOwner(adminId) {
-        return request.auth.uid == adminId;
-      }
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      allow get: if isSignedIn() && isOwner(adminId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(adminId);
-      allow update: if isSignedIn() && isOwner(adminId);
-      allow delete: if isSignedIn() && isOwner(adminId);
+        function isAdmin() {
+            return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+        }
+
+        allow get: if isAdmin();
+        allow list: if false;
+        allow create: if isAdmin();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
     }
 
     /**
-     * @description Stores issue reports submitted by citizens.
+     * @description Controls access to issue reports. Users can create issue reports, but only the owner can modify or delete them.
      * @path /issue_reports/{issueReportId}
-     * @allow (get, list) Everyone can read.
-     * @allow (create) Signed in users can create, enforcing citizenId == request.auth.uid.
-     * @allow (update, delete) Only admins or the report creator can modify.
-     * @deny (update, delete) if not an admin and not the report creator.
-     * @principle Public read with owner-only writes, admin override.
+     * @allow (create) Authenticated user can create an issue report.
+     * @allow (get,list) Any user can read an issue report.
+     * @allow (update,delete) Only the owner (citizenId) can update or delete an issue report.
+     * @deny (update,delete) Non-owner cannot update or delete an issue report.
+     * @principle Enforces ownership for issue report modification and deletion.
      */
     match /issue_reports/{issueReportId} {
-      function isOwner(citizenId) {
-        return request.auth.uid == citizenId;
-      }
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isAdmin() {
-        return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-      }
-      function isExistingOwner(citizenId) {
-          return isOwner(citizenId) && resource.data.citizenId == citizenId;
-      }
+        function isSignedIn() {
+            return request.auth != null;
+        }
 
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn() && request.resource.data.citizenId == request.auth.uid;
-      allow update: if isSignedIn() && (isAdmin() || isExistingOwner(request.auth.uid));
-      allow delete: if isSignedIn() && (isAdmin() || isExistingOwner(request.auth.uid));
-    }
-
-     /**
-      * @description Stores issue reports specific to a given user. This duplicates the issue reports data from the /issue_reports collection.
-      * @path /users/{userId}/issue_reports/{issueReportId}
-      * @allow (create, get, update, delete, list) Only the owner can manage their own issue reports.
-      * @deny (create, get, update, delete, list) If the user ID in the path does not match the authenticated user ID.
-      * @principle Enforces document ownership for writes.
-      */
-    match /users/{userId}/issue_reports/{issueReportId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-       function isExistingOwner(userId) {
-          return isOwner(userId) && resource.data.citizenId == request.auth.uid;
-      }
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.citizenId == request.auth.uid;
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+        allow get, list: if true;
+        allow create: if isSignedIn();
+        allow update: if request.auth.uid == resource.data.citizenId;
+        allow delete: if request.auth.uid == resource.data.citizenId;
     }
 
     /**
-     * @description Stores air quality sensor data.
+     * @description Controls access to user-specific issue reports. Only the user can list their own issue reports.
+     * @path /users/{userId}/issue_reports/{issueReportId}
+     * @allow (create) Authenticated user can create an issue report under their user ID.
+     * @allow (get) Any user can read an issue report.
+     * @allow (list) Only the user (userId) can list issue reports under their user ID.
+     * @allow (update,delete) Only the owner (citizenId) can update or delete an issue report.
+     * @deny (create) User cannot create an issue report under another user's ID.
+     * @deny (list) User cannot list issue reports under another user's ID.
+     * @principle Restricts access to user-specific issue reports based on user ID.
+     */
+    match /users/{userId}/issue_reports/{issueReportId} {
+        function isSignedIn() {
+            return request.auth != null;
+        }
+
+        function isOwner(userId) {
+            return request.auth.uid == userId;
+        }
+
+        allow get: if true;
+        allow list: if isOwner(userId);
+        allow create: if isSignedIn() && isOwner(userId);
+        allow update: if request.auth.uid == resource.data.citizenId;
+        allow delete: if request.auth.uid == resource.data.citizenId;
+    }
+
+    /**
+     * @description Allows public read access to air quality sensor data.
      * @path /air_quality_sensors/{sensorId}
-     * @allow (get, list) Publicly readable.
-     * @deny (create, update, delete) Not allowed.
-     * @principle Public read.
+     * @allow (get,list) Any user can read air quality sensor data.
+     * @deny (create,update,delete) No user can create, update, or delete air quality sensor data without valid credential. // TODO: Add validation once credential type is implemented.
+     * @principle Provides public read access for sensor data.
      */
     match /air_quality_sensors/{sensorId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+        allow get, list: if true;
+        allow create, update, delete: if false; // TODO: Add validation once credential type is implemented.
     }
 
     /**
-     * @description Stores disaster alert information.
+     * @description Allows public read access to disaster alert information.
      * @path /disaster_alerts/{alertId}
-     * @allow (get, list) Publicly readable.
-     * @deny (create, update, delete) Not allowed.
-     * @principle Public read.
+     * @allow (get,list) Any user can read disaster alert information.
+     * @deny (create,update,delete) No user can create, update, or delete disaster alert information without valid credential. // TODO: Add validation once credential type is implemented.
+     * @principle Provides public read access for disaster alerts.
      */
     match /disaster_alerts/{alertId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+        allow get, list: if true;
+        allow create, update, delete: if false;  // TODO: Add validation once credential type is implemented.
     }
   }
 }
