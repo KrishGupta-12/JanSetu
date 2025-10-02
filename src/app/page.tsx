@@ -41,7 +41,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-20 bg-background/80 backdrop-blur-sm border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Logo />
+          <Link href="/"><Logo /></Link>
           <div className="flex items-center gap-4">
             <Button asChild variant="ghost">
               <Link href="/login">Login</Link>
@@ -70,7 +70,7 @@ export default function LandingPage() {
           </h1>
           <div className="mb-8">
             <p className="text-2xl font-semibold text-slate-100">जनसेवा हि धर्मः</p>
-            <p className="text-sm text-slate-300 italic">(&quot;Service to the people is the highest duty&quot;)</p>
+            <p className="text-sm text-slate-300 italic">("Service to the people is the highest duty")</p>
           </div>
           <p className="text-lg md:text-xl text-slate-200 mb-8">
             JanSetu is a platform for civic engagement. Report issues, monitor your environment, and contribute to a smarter, cleaner, and safer city.
@@ -91,7 +91,7 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
+            {features.slice(0,5).map((feature, index) => (
               <Card key={index} className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card">
                 <CardHeader className="items-center text-center">
                   {feature.icon}
@@ -102,6 +102,17 @@ export default function LandingPage() {
                 </CardContent>
               </Card>
             ))}
+             <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card border-primary border-2 flex flex-col items-center justify-center text-center">
+                <CardHeader>
+                    <CardTitle>And Many More...</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-4">Explore all our features designed for a better city.</p>
+                    <Button asChild>
+                        <Link href="/features">View All Features</Link>
+                    </Button>
+                </CardContent>
+            </Card>
           </div>
         </div>
       </section>

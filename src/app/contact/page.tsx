@@ -1,9 +1,9 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Logo from '@/components/common/Logo';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin, ShieldQuestion, Code } from 'lucide-react';
 
 export default function ContactUsPage() {
   return (
@@ -21,37 +21,63 @@ export default function ContactUsPage() {
           </div>
         </div>
       </header>
-      <main className="container mx-auto max-w-4xl py-16 px-4">
+      <main className="container mx-auto max-w-5xl py-16 px-4">
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-headline">Contact Us</CardTitle>
-            <p className="text-muted-foreground">We&apos;d love to hear from you. Here&apos;s how you can reach us.</p>
+            <CardDescription className="max-w-2xl mx-auto">
+                We are here to help. Whether you have a question about a report, a technical issue, or a general inquiry, please reach out to the appropriate department below.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="flex flex-col items-center">
-              <Mail className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-lg font-semibold">Email</h3>
-              <p className="text-muted-foreground">For general inquiries</p>
-              <a href="mailto:contact@jansetu.gov.in" className="text-primary hover:underline">contact@jansetu.gov.in</a>
-            </div>
-            <div className="flex flex-col items-center">
-              <Phone className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-lg font-semibold">Phone</h3>
-              <p className="text-muted-foreground">Mon-Fri, 9am-5pm IST</p>
-              <a href="tel:+911123456789" className="text-primary hover:underline">+91-11-23456789</a>
-            </div>
-            <div className="flex flex-col items-center">
-              <MapPin className="h-12 w-12 text-primary mb-4" />
-              <h3 className="text-lg font-semibold">Office</h3>
-              <p className="text-muted-foreground">Pragati Maidan, New Delhi</p>
-              <p className="text-primary">India</p>
-            </div>
+          <CardContent className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <Card className="p-6 text-center flex flex-col items-center">
+              <Mail className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold">General Inquiries</h3>
+              <p className="text-muted-foreground text-sm flex-1 mb-4">For questions about the JanSetu initiative, partnerships, or media requests.</p>
+              <Button asChild variant="outline">
+                <a href="mailto:info@jansetu.gov.in">info@jansetu.gov.in</a>
+              </Button>
+            </Card>
+
+            <Card className="p-6 text-center flex flex-col items-center">
+              <ShieldQuestion className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold">Report Follow-up</h3>
+              <p className="text-muted-foreground text-sm flex-1 mb-4">For questions about a specific report you've submitted or its status.</p>
+              <Button asChild variant="outline">
+                <a href="mailto:support@jansetu.gov.in">support@jansetu.gov.in</a>
+              </Button>
+            </Card>
+
+            <Card className="p-6 text-center flex flex-col items-center">
+              <Code className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold">Technical Support</h3>
+              <p className="text-muted-foreground text-sm flex-1 mb-4">If you are experiencing technical difficulties with the app or website.</p>
+              <Button asChild variant="outline">
+                <a href="mailto:tech@jansetu.gov.in">tech@jansetu.gov.in</a>
+              </Button>
+            </Card>
+
           </CardContent>
+           <CardContent className="mt-6 text-center">
+            <div className="flex flex-col items-center border-t pt-8">
+                <MapPin className="h-10 w-10 text-primary mb-4" />
+                <h3 className="text-lg font-semibold">Head Office</h3>
+                <p className="text-muted-foreground">Ministry of Urban Development</p>
+                <p className="text-muted-foreground">Pragati Maidan, New Delhi, India</p>
+            </div>
+           </CardContent>
         </Card>
       </main>
        <footer className="bg-background border-t">
-        <div className="container mx-auto py-6 px-4 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} JanSetu. All rights reserved.</p>
+        <div className="container mx-auto py-8 px-4 text-center">
+            <div className="flex justify-center gap-6 mb-4">
+                <Link href="/features" className="text-sm text-muted-foreground hover:text-primary">Features</Link>
+                <Link href="/terms" className="text-sm text-muted-foreground hover:text-primary">Terms of Service</Link>
+                <Link href="/privacy" className="text-sm text-muted-foreground hover:text-primary">Privacy Policy</Link>
+                <Link href="/contact" className="text-sm text-muted-foreground hover:text-primary">Contact Us</Link>
+            </div>
+            <p className="text-muted-foreground">&copy; {new Date().getFullYear()} JanSetu. All rights reserved.</p>
         </div>
       </footer>
     </div>
