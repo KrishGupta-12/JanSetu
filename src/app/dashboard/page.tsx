@@ -22,8 +22,6 @@ import { ReportStatus, AdminRole } from '@/lib/types';
 import { Files, Megaphone, Trophy } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
-import MapProvider from '@/components/home/MapProvider';
-import MapView from '@/components/home/MapView';
 
 
 const statusStyles: { [key in ReportStatus]: string } = {
@@ -87,48 +85,35 @@ export default function DashboardPage() {
               Welcome back, {user.name}! Here's what's happening in your city.
             </p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Live City Issue Map</CardTitle>
-                    <CardDescription>An overview of all active reports in Chandigarh.</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[400px] w-full p-0">
-                    <MapProvider>
-                        <MapView reports={allReports || []} />
-                    </MapProvider>
-                </CardContent>
-            </Card>
-            <div className="flex flex-col gap-6">
-                <AqiCard />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <Card className="shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Trophy className="text-yellow-500" /> Leaderboard</CardTitle>
-                            <CardDescription>See top community contributors.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                        <Button asChild className="w-full">
-                            <Link href="/dashboard/leaderboard">View Leaderboard</Link>
-                        </Button>
-                        </CardContent>
-                    </Card>
-                    <Card className="shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Megaphone /> Community Feed</CardTitle>
-                            <CardDescription>View live reports from citizens.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                        <Button asChild className="w-full">
-                            <Link href="/dashboard/feed">View Feed</Link>
-                        </Button>
-                        </CardContent>
-                    </Card>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AqiCard />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Trophy className="text-yellow-500" /> Leaderboard</CardTitle>
+                        <CardDescription>See top community contributors.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <Button asChild className="w-full">
+                        <Link href="/dashboard/leaderboard">View Leaderboard</Link>
+                    </Button>
+                    </CardContent>
+                </Card>
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Megaphone /> Community Feed</CardTitle>
+                        <CardDescription>View live reports from citizens.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <Button asChild className="w-full">
+                        <Link href="/dashboard/feed">View Feed</Link>
+                    </Button>
+                    </CardContent>
+                </Card>
             </div>
         </div>
 
-       <Card className="flex-1 shadow-lg h-full">
+       <Card className="flex-1 shadow-lg h-full mt-6">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle>My Recent Reports</CardTitle>

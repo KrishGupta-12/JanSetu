@@ -12,11 +12,6 @@ const features = [
     description: 'Our Genkit-powered AI automatically analyzes report descriptions to assign a relevant category and urgency level, streamlining the dispatch process.',
   },
   {
-    icon: <MapPin className="h-10 w-10 text-primary" />,
-    title: 'Geo-tagged Issue Reporting',
-    description: 'Accurately tag the location of an issue using your device\'s GPS, providing administrators with the exact coordinates for swift action.',
-  },
-  {
     icon: <ThumbsUp className="h-10 w-10 text-primary" />,
     title: 'Community Upvoting',
     description: 'Users can upvote existing reports in the community feed, helping administrators identify and prioritize the most critical and widespread issues.',

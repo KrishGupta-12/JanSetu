@@ -8,11 +8,6 @@ import Logo from '@/components/common/Logo';
 
 const features = [
   {
-    icon: <MapPin className="h-10 w-10 text-primary" />,
-    title: 'Real-time Issue Mapping',
-    description: 'Visualize all reported issues on an interactive map to understand problem hotspots across the city.',
-  },
-  {
     icon: <BarChart className="h-10 w-10 text-primary" />,
     title: 'Live Air Quality Index',
     description: 'Stay informed about the air you breathe with real-time AQI data from sensors across the city.',
