@@ -6,7 +6,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Files, ListChecks, Hourglass, ShieldX, Award, Star, Mail, Phone, Calendar, Home } from 'lucide-react';
-import { Report, ReportStatus } from '@/lib/types';
+import { Report, ReportStatus, UserRole } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 

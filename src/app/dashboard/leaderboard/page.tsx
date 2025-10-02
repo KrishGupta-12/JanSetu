@@ -1,9 +1,10 @@
+
 'use client';
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserProfile, Report, ReportStatus } from '@/lib/types';
+import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -63,7 +64,7 @@ function LeaderboardSkeleton() {
 export default function LeaderboardPage() {
     const firestore = useFirestore();
 
-    const citizensQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', null)), [firestore]);
+    const citizensQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'citizen')), [firestore]);
     const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
     
     const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);

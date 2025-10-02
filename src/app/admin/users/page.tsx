@@ -1,6 +1,7 @@
+
 'use client';
 
-import { UserProfile, Report, ReportStatus, AdminRole } from '@/lib/types';
+import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -82,7 +83,7 @@ export default function UsersPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', null)), [firestore]);
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'citizen')), [firestore]);
   const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(usersQuery);
 
   const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
@@ -205,7 +206,7 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                       {adminUser?.role === AdminRole.SuperAdmin && (
+                       {adminUser?.role === UserRole.SuperAdmin && (
                          <DropdownMenu>
                            <DropdownMenuTrigger asChild>
                              <Button variant="ghost" className="h-8 w-8 p-0">

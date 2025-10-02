@@ -72,38 +72,39 @@ export type UserProfile = {
   city?: string;
   state?: string;
   bannedUntil?: string | 'lifetime' | null; 
-  role: AdminRole | null;
+  role: UserRole;
   department?: ReportCategory;
 };
 
 
-export enum AdminRole {
+export enum UserRole {
     SuperAdmin = 'super_admin',
     WasteAdmin = 'waste_admin',
     PotholeAdmin = 'pothole_admin',
     StreetlightAdmin = 'streetlight_admin',
-    WaterAdmin = 'water_admin'
+    WaterAdmin = 'water_admin',
+    Citizen = 'citizen',
 }
 
 export const DepartmentAdminRoles = [
-  AdminRole.WasteAdmin,
-  AdminRole.PotholeAdmin,
-  AdminRole.StreetlightAdmin,
-  AdminRole.WaterAdmin
+  UserRole.WasteAdmin,
+  UserRole.PotholeAdmin,
+  UserRole.StreetlightAdmin,
+  UserRole.WaterAdmin
 ];
 
 export type AdminCredential = {
-    role: AdminRole;
+    role: UserRole;
     department?: ReportCategory;
 }
 
 
 export type Admin = UserProfile & {
-    role: AdminRole;
+    role: Exclude<UserRole, UserRole.Citizen>;
 };
 
 export type Citizen = UserProfile & {
-    role: null;
+    role: UserRole.Citizen;
 }
 
 export type AlertLevel = 'Info' | 'Warning' | 'Critical';

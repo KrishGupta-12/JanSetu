@@ -5,16 +5,16 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
-import { UserProfile, AdminCredential, ReportCategory, AdminRole } from '@/lib/types';
+import { UserProfile, AdminCredential, ReportCategory, UserRole } from '@/lib/types';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
-const getDepartmentFromRole = (role: AdminRole): ReportCategory | undefined => {
+const getDepartmentFromRole = (role: UserRole): ReportCategory | undefined => {
     switch (role) {
-        case AdminRole.WasteAdmin: return ReportCategory.Waste;
-        case AdminRole.PotholeAdmin: return ReportCategory.Pothole;
-        case AdminRole.StreetlightAdmin: return ReportCategory.Streetlight;
-        case AdminRole.WaterAdmin: return ReportCategory.Water;
+        case UserRole.WasteAdmin: return ReportCategory.Waste;
+        case UserRole.PotholeAdmin: return ReportCategory.Pothole;
+        case UserRole.StreetlightAdmin: return ReportCategory.Streetlight;
+        case UserRole.WaterAdmin: return ReportCategory.Water;
         default: return undefined;
     }
 }
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (userDoc.exists()) {
         const profileData = userDoc.data() as UserProfile;
         // If it's a department admin, ensure department is set from role
-        if(profileData.role && profileData.role !== AdminRole.SuperAdmin) {
+        if(profileData.role && profileData.role !== UserRole.SuperAdmin) {
             profileData.department = getDepartmentFromRole(profileData.role);
         }
         setUser(profileData);
@@ -88,7 +88,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<UserProfile> => {
     const { uid, email, displayName } = fbUser;
     
-    // All new signups are citizens
     const newUserProfile: UserProfile = {
         uid,
         name: additionalData.name || displayName || email?.split('@')[0] || 'Anonymous',
@@ -96,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         phone: additionalData.phone || '',
         address: additionalData.address || '',
         dateJoined: new Date().toISOString(),
-        role: null, // New users are always citizens
+        role: UserRole.Citizen, 
     };
     
     const userDocRef = doc(firestore, 'users', uid);

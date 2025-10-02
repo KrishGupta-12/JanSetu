@@ -12,7 +12,7 @@
         "phone": { "type": "string", "description": "The user's phone number." },
         "address": { "type": "string", "description": "The user's full address." },
         "dateJoined": { "type": "string", "format": "date-time", "description": "The date the user signed up." },
-        "role": { "type": ["string", "null"], "enum": ["super_admin", "waste_admin", "pothole_admin", "streetlight_admin", "water_admin", null], "description": "The user's role. Null indicates a regular citizen." },
+        "role": { "type": "string", "enum": ["super_admin", "waste_admin", "pothole_admin", "streetlight_admin", "water_admin", "citizen"], "description": "The user's role." },
         "department": { "type": "string", "enum": ["Waste Management", "Potholes", "Streetlight Outage", "Water Logging", "Other"], "description": "The department an admin belongs to, if applicable." },
         "bannedUntil": { "type": ["string", "null"], "description": "If the user is banned, this holds the ban's expiration date or 'lifetime'." }
       },

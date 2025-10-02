@@ -1,9 +1,11 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdminLayout from '@/app/admin/layout';
 import DashboardLayout from '@/app/dashboard/layout';
+import { UserRole } from '@/lib/types';
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -16,8 +18,8 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  // If user has a role, they are an admin
-  if (user.role) {
+  // If user has a role that is not citizen, they are an admin
+  if (user.role !== UserRole.Citizen) {
     return <AdminLayout>{children}</AdminLayout>;
   }
 
