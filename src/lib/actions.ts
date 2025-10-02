@@ -4,7 +4,6 @@
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { classifyReport } from '@/ai/flows/classify-report';
-import { ReportCategory } from './types';
 import { initializeAdminApp } from '@/firebase/server-init';
 import { collection, addDoc } from 'firebase/firestore';
 
@@ -17,22 +16,17 @@ const reportSchema = z.object({
   citizenId: z.string().min(1, 'Citizen ID is missing.'),
 });
 
+export type ReportFormValues = z.infer<typeof reportSchema>;
+
 export type FormState = {
   message: string;
   status: 'success' | 'error' | 'idle';
 };
 
 export async function submitReport(
-  formData: FormData
+  values: ReportFormValues
 ): Promise<FormState> {
-  const validatedFields = reportSchema.safeParse({
-    description: formData.get('description'),
-    complainantName: formData.get('complainantName'),
-    complainantPhone: formData.get('complainantPhone'),
-    locationAddress: formData.get('locationAddress'),
-    photo: formData.get('photo'),
-    citizenId: formData.get('citizenId'),
-  });
+  const validatedFields = reportSchema.safeParse(values);
 
   if (!validatedFields.success) {
     const firstError = Object.values(validatedFields.error.flatten().fieldErrors)[0]?.[0];
@@ -79,9 +73,12 @@ export async function submitReport(
     };
   } catch (error) {
     console.error('Error submitting report:', error);
+    if (error instanceof Error) {
+       return { status: 'error', message: error.message };
+    }
     return {
       status: 'error',
-      message: 'There was an error submitting your report. Please try again.',
+      message: 'An unknown error occurred while submitting your report. Please try again.',
     };
   }
 }

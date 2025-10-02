@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Image as ImageIcon, Loader2, Ban } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-import { submitReport } from '@/lib/actions';
+import { submitReport, ReportFormValues } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -38,7 +38,6 @@ const reportFormSchema = z.object({
   citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
 
-type ReportFormValues = z.infer<typeof reportFormSchema>;
 
 export default function ReportForm() {
   const { user, isLoading: isUserLoading } = useAuth();
@@ -58,10 +57,11 @@ export default function ReportForm() {
     resolver: zodResolver(reportFormSchema),
     defaultValues: {
       description: '',
-      complainantName: user?.name || '',
-      complainantPhone: user?.phone || '',
-      locationAddress: user?.address || '',
-      citizenId: user?.uid || '',
+      complainantName: '',
+      complainantPhone: '',
+      locationAddress: '',
+      citizenId: '',
+      photo: '',
     },
   });
 
@@ -100,14 +100,7 @@ export default function ReportForm() {
 
   async function onSubmit(values: ReportFormValues) {
     setIsSubmitting(true);
-    const formData = new FormData();
-    Object.entries(values).forEach(([key, value]) => {
-        if (value) {
-            formData.append(key, value);
-        }
-    });
-
-    const result = await submitReport(formData);
+    const result = await submitReport(values);
 
     if (result.status === 'success') {
       toast({
@@ -138,7 +131,7 @@ export default function ReportForm() {
             <AlertTitle>Account Suspended</AlertTitle>
             <AlertDescription>
                 Your account is currently suspended from submitting new reports.
-                {user.bannedUntil !== 'lifetime' && ` This suspension will be lifted on ${new Date(user.bannedUntil!).toLocaleDateString()}.`}
+                {user.bannedUntil !== 'lifetime' && ` This suspension will be lifted on ${new Date(user.bannedUntil).toLocaleDateString()}.`}
             </AlertDescription>
           </Alert>
       )
@@ -210,7 +203,7 @@ export default function ReportForm() {
           />
           
           <FormItem>
-            <FormLabel>Photo</FormLabel>
+            <FormLabel>Photo (Optional)</FormLabel>
              <FormControl>
                 <div className="relative w-full h-48 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50 hover:border-primary transition-colors">
                     <Input id="photo-upload" type="file" accept="image/*" className="absolute w-full h-full opacity-0 cursor-pointer" onChange={handlePhotoChange} />
