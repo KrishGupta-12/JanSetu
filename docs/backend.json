@@ -1,18 +1,58 @@
 {
   "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile in the JanSetu application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "User's full name."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "User's phone number."
+        },
+        "registrationDate": {
+          "type": "string",
+          "description": "Date and time the user registered.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "The user's current location."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name",
+        "registrationDate"
+      ]
+    },
     "IssueReport": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "IssueReport",
       "type": "object",
-      "description": "Represents a reported issue by a citizen.",
+      "description": "Represents an issue reported by a user.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the issue report."
+          "description": "Unique identifier for the IssueReport entity."
         },
-        "userId": {
+        "userProfileId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N IssueReport)"
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N IssueReport)"
         },
         "category": {
           "type": "string",
@@ -32,113 +72,40 @@
         },
         "imageUrl": {
           "type": "string",
-          "description": "URL of the uploaded image related to the issue."
+          "description": "URL of the uploaded image.",
+          "format": "uri"
+        },
+        "reportDate": {
+          "type": "string",
+          "description": "Date and time the issue was reported.",
+          "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "Current status of the issue report (e.g., reported, assigned, resolved)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the issue was reported.",
-          "format": "date-time"
-        },
-        "assignedAdminId": {
-          "type": "string",
-          "description": "Reference to AdminUser. (Relationship: AdminUser 1:N IssueReport). Nullable if not assigned."
+          "description": "Current status of the issue (e.g., reported, in progress, resolved)."
         }
       },
       "required": [
         "id",
-        "userId",
+        "userProfileId",
         "category",
         "description",
         "latitude",
         "longitude",
         "imageUrl",
-        "status",
-        "createdAt"
+        "reportDate",
+        "status"
       ]
     },
-    "User": {
+    "AirQualitySensor": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
+      "title": "AirQualitySensor",
       "type": "object",
-      "description": "Represents a citizen user of the application.",
+      "description": "Represents an air quality sensor and its data.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user.",
-          "format": "email"
-        },
-        "phone": {
-          "type": "string",
-          "description": "Phone number of the user."
-        },
-        "location": {
-          "type": "string",
-          "description": "Location of the user."
-        },
-        "disasterAlertSubscription": {
-          "type": "boolean",
-          "description": "Is user subscribed to disaster alerts"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "phone"
-      ]
-    },
-    "AdminUser": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AdminUser",
-      "type": "object",
-      "description": "Represents an administrative user of the application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the admin user."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the admin user."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the admin user.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "Role of the admin user (e.g., admin, superadmin)."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "email",
-        "role"
-      ]
-    },
-    "AQISensor": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AQISensor",
-      "type": "object",
-      "description": "Represents an Air Quality Index (AQI) sensor.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AQI sensor."
+          "description": "Unique identifier for the AirQualitySensor entity."
         },
         "latitude": {
           "type": "number",
@@ -148,9 +115,9 @@
           "type": "number",
           "description": "Longitude of the sensor's location."
         },
-        "aqiValue": {
+        "aqi": {
           "type": "number",
-          "description": "Current AQI value reported by the sensor."
+          "description": "Air Quality Index value."
         },
         "timestamp": {
           "type": "string",
@@ -162,7 +129,7 @@
         "id",
         "latitude",
         "longitude",
-        "aqiValue",
+        "aqi",
         "timestamp"
       ]
     },
@@ -170,34 +137,44 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DisasterAlert",
       "type": "object",
-      "description": "Represents a disaster alert notification.",
+      "description": "Represents a disaster alert and its geographical impact zone.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the disaster alert."
+          "description": "Unique identifier for the DisasterAlert entity."
         },
-        "message": {
+        "alertType": {
           "type": "string",
-          "description": "Message content of the disaster alert."
+          "description": "Type of disaster (e.g., flood, earthquake)."
+        },
+        "severity": {
+          "type": "string",
+          "description": "Severity of the disaster (e.g., low, medium, high)."
         },
         "polygonCoordinates": {
           "type": "array",
-          "description": "Array of lat/long coordinates defining the geographical polygon of the affected zone.",
+          "description": "Array of coordinates defining the geographical impact zone.",
           "items": {
             "type": "string"
           }
         },
-        "sentAt": {
+        "message": {
           "type": "string",
-          "description": "Timestamp indicating when the alert was sent.",
+          "description": "Alert message to be displayed to users."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the alert was issued.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "message",
+        "alertType",
+        "severity",
         "polygonCoordinates",
-        "sentAt"
+        "message",
+        "timestamp"
       ]
     }
   },
@@ -210,17 +187,21 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
+        "path": "/users/{userId}/userProfile/{userProfileId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "UserProfile",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile information. Path-based ownership ensures only the user or authorized admins can access user data.",
+          "description": "Stores user profile information. 'userId' defines ownership. userProfileId must equal userId. Includes 'userId' as denormalized field for Authorization Independence.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the user profile. Must match userId."
             }
           ]
         }
@@ -232,47 +213,31 @@
           "schema": {
             "$ref": "#/backend/entities/IssueReport"
           },
-          "description": "Stores issue reports created by the user. Includes denormalized 'userId' for authorization independence.",
+          "description": "Stores issue reports created by a specific user. 'userId' defines ownership. Includes 'userId' as denormalized field for Authorization Independence.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who created the issue report."
+              "description": "The unique identifier of the user who created the report."
             },
             {
               "name": "issueReportId",
-              "description": "The unique identifier for the issue report."
+              "description": "The unique identifier of the issue report."
             }
           ]
         }
       },
       {
-        "path": "/adminUsers/{adminUserId}",
+        "path": "/airQualitySensors/{airQualitySensorId}",
         "definition": {
-          "entityName": "AdminUser",
+          "entityName": "AirQualitySensor",
           "schema": {
-            "$ref": "#/backend/entities/AdminUser"
+            "$ref": "#/backend/entities/AirQualitySensor"
           },
-          "description": "Stores admin user profile information. Existence of a document here grants admin privileges.",
+          "description": "Stores data from air quality sensors.",
           "params": [
             {
-              "name": "adminUserId",
-              "description": "The unique identifier for the admin user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/aqiSensors/{aqiSensorId}",
-        "definition": {
-          "entityName": "AQISensor",
-          "schema": {
-            "$ref": "#/backend/entities/AQISensor"
-          },
-          "description": "Stores data for AQI sensors.",
-          "params": [
-            {
-              "name": "aqiSensorId",
-              "description": "The unique identifier for the AQI sensor."
+              "name": "airQualitySensorId",
+              "description": "The unique identifier of the air quality sensor."
             }
           ]
         }
@@ -284,16 +249,16 @@
           "schema": {
             "$ref": "#/backend/entities/DisasterAlert"
           },
-          "description": "Stores disaster alert information.",
+          "description": "Stores disaster alerts with geographical impact zones.",
           "params": [
             {
               "name": "disasterAlertId",
-              "description": "The unique identifier for the disaster alert."
+              "description": "The unique identifier of the disaster alert."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability, aligning with the specified principles. It leverages denormalization and structural segregation to optimize security rules and query performance.\n\n**Authorization Independence:**\n\n*   **Issue Reports:** The `issueReports` subcollection under each user includes the `userId` of the user. This denormalization is crucial. Although `assignedAdminId` is on the document, admins have global read access, so no membership map is required. By storing the relevant user ID directly in the issue report document, rules can validate ownership (`request.auth.uid == resource.data.userId`) without needing to perform costly `get()` operations to fetch the user's data.\n\n**Structural Segregation:**\n\n*   User data is stored in `/users/{userId}` ensuring that only the user or authorized admins can access it.  \n*   Admin user data is stored in `/adminUsers/{adminUserId}`, so only they have access to edit the data.\n\n**Access Modeling:**\n\n*   **Private Data:** User profiles are located under `/users/{userId}`, following the Path-Based ownership model.  Issue reports are also created this way to support the 1:N relationship.\n*   **Global Roles (DBAC):** Admin status is granted via documents in the `/adminUsers/{adminUserId}` collection. This supports `exists()` checks in security rules.\n\n**QAPs (Rules Are Not Filters):**\n\n*   The segregation of user and admin data into distinct collections enables secure `list` operations. Rules can efficiently filter based on path without inspecting document content, preventing the need to write complex, inefficient filtering logic within the rules themselves.\n\n**Invariants:**\n\n*   Timestamps are included for auditability and can be used in security rules to enforce time-based restrictions if necessary.\n*   The structure supports maintaining the integrity of ownership and preventing unauthorized modifications."
+    "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). It leverages denormalization, structural segregation, and consistent access modeling.\n\n*   **Authorization Independence:** The design avoids hierarchical authorization dependencies by denormalizing authorization context. For instance, IssueReports are stored within a user's subcollection (users/{userId}/issueReports/{issueReportId}), which implicitly grants the user ownership. No `get()` calls are needed to verify ownership.\n*   **Clarity of Intent:** The structure makes authorization intent explicit by using path-based ownership for user-specific data and segregating data with different access needs.\n*   **DBAC (No Custom Claims):** Roles are managed implicitly through path-based ownership (`/users/{userId}/...`).\n*   **QAPs (Rules are not Filters):** The structure supports secure `list` operations by using path-based ownership. Listing issue reports is scoped to a specific user, ensuring that rules don't act as filters.\n*   **Invariants:** Path-based ownership enforces the integrity of ownership, timestamps, and denormalized data.\n\n**Collection Structure Details:**\n\n*   **/users/{userId}/userProfile:** Stores user profile information. The 'userId' in the path inherently defines ownership. The userProfileId will be equal to userId.\n*   **/users/{userId}/issueReports/{issueReportId}:** Stores issue reports created by a specific user. The 'userId' in the path defines the owner of these reports.\n*   **/airQualitySensors/{airQualitySensorId}:** Stores data from air quality sensors.  No specific ownership, so stored at the root level.\n*   **/disasterAlerts/{disasterAlertId}:** Stores disaster alerts with geographical impact zones. No specific ownership, so stored at the root level."
   }
 }
