@@ -9,12 +9,15 @@ import { UserProfile, AdminCredential, ReportCategory, AdminRole } from '@/lib/t
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
-const demoAdmins: {[email: string]: AdminCredential} = {
-    'super.admin@jancorp.com': { role: AdminRole.SuperAdmin },
-    'waste.admin@jancorp.com': { role: AdminRole.DepartmentAdmin, department: ReportCategory.Waste },
-    'pothole.admin@jancorp.com': { role: AdminRole.DepartmentAdmin, department: ReportCategory.Pothole },
-    'streetlight.admin@jancorp.com': { role: AdminRole.DepartmentAdmin, department: ReportCategory.Streetlight },
-};
+const getDepartmentFromRole = (role: AdminRole): ReportCategory | undefined => {
+    switch (role) {
+        case AdminRole.WasteAdmin: return ReportCategory.Waste;
+        case AdminRole.PotholeAdmin: return ReportCategory.Pothole;
+        case AdminRole.StreetlightAdmin: return ReportCategory.Streetlight;
+        case AdminRole.WaterAdmin: return ReportCategory.Water;
+        default: return undefined;
+    }
+}
 
 type SignupData = {
     name: string;
@@ -31,7 +34,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signup: (data: SignupData) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
-  updateUser: (user: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,9 +50,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userDocRef = doc(firestore, 'users', fbUser.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
-        setUser(userDoc.data() as UserProfile);
+        const profileData = userDoc.data() as UserProfile;
+        // If it's a department admin, ensure department is set from role
+        if(profileData.role && profileData.role !== AdminRole.SuperAdmin) {
+            profileData.department = getDepartmentFromRole(profileData.role);
+        }
+        setUser(profileData);
       } else {
-        // If user exists in Auth but not in Firestore, create their profile
+        // This case would be for a first-time login for a pre-provisioned auth user
+        // or if a user's profile document was deleted.
+        // We'll create a basic profile.
         await createUserProfile(fbUser);
       }
       setIsLoading(false);
@@ -79,37 +88,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   ): Promise<UserProfile> => {
     const { uid, email, displayName } = fbUser;
     
-    let roleData: Partial<UserProfile> = { role: null };
-    
-    // Check if the signing-up user is a pre-defined demo admin
-    const demoAdminInfo = demoAdmins[email!];
-    if (demoAdminInfo) {
-        // This is a demo admin, let's ensure their credential exists in the /admins collection
-        const adminRef = doc(firestore, 'admins', email!);
-        const adminDoc = await getDoc(adminRef);
-
-        if (!adminDoc.exists()) {
-            // Document doesn't exist, so create it.
-            await setDoc(adminRef, demoAdminInfo);
-        }
-        
-        roleData = {
-            role: demoAdminInfo.role,
-            department: demoAdminInfo.department,
-        };
-    }
-
+    // All new signups are citizens
     const newUserProfile: UserProfile = {
         uid,
         name: additionalData.name || displayName || email?.split('@')[0] || 'Anonymous',
         email: email!,
+        phone: additionalData.phone || '',
+        address: additionalData.address || '',
         dateJoined: new Date().toISOString(),
-        ...roleData,
-        ...additionalData,
+        role: null, // New users are always citizens
     };
     
     const userDocRef = doc(firestore, 'users', uid);
-    // Use setDoc with merge to create or update the user profile
     await setDoc(userDocRef, newUserProfile, { merge: true });
     setUser(newUserProfile);
     return newUserProfile;
@@ -119,14 +109,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Let the onAuthStateChanged listener handle profile fetching.
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
-        // If user not found, try to sign them up as it could be a first-time demo user
-         return signup({name: email.split('@')[0], email, password, phone: '', address: ''});
-      }
-      return { success: false, message: error.message || 'Invalid email or password.' };
+       return { success: false, message: error.message || 'Invalid email or password.' };
     }
   };
 
@@ -144,17 +129,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     signOut(auth);
   };
-  
-  const updateUser = useCallback((updatedData: Partial<UserProfile>) => {
-      if (!user) return;
-      const userDocRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userDocRef, updatedData, { merge: true });
-      setUser(prev => prev ? { ...prev, ...updatedData } : null);
-  }, [user, firestore]);
-
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isLoading: isLoading || isFirebaseLoading, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, firebaseUser, isLoading: isLoading || isFirebaseLoading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

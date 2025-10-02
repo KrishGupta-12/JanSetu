@@ -1,15 +1,18 @@
+
 'use client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Report, ReportStatus, AdminRole, UserProfile } from '@/lib/types';
+import { Report, ReportStatus, AdminRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Star } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { differenceInDays } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+
+const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: 'hsl(var(--chart-1))',
@@ -27,15 +30,14 @@ export default function MyDepartmentPage() {
   const firestore = useFirestore();
 
   const reportsQuery = useMemoFirebase(() => {
-    if (!adminData || !adminData.uid) return null;
-     if (adminData.role === AdminRole.SuperAdmin) return null;
+    if (!adminData || !adminData.uid || !adminData.role || !isDepartmentAdmin(adminData.role)) return null;
     return query(collection(firestore, 'issueReports'), where('assignedAdminId', '==', adminData.uid));
   }, [adminData, firestore]);
 
   const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
   useEffect(() => {
-    if (!isUserLoading && (!adminData || !adminData.role || adminData.role === AdminRole.SuperAdmin)) {
+    if (!isUserLoading && (!adminData || !adminData.role || !isDepartmentAdmin(adminData.role))) {
       router.push('/admin'); 
     }
   }, [adminData, isUserLoading, router]);

@@ -1,5 +1,6 @@
+
 'use client'
-import { Report, ReportCategory, ReportStatus, AdminRole, UserProfile } from '@/lib/types';
+import { Report, ReportCategory, ReportStatus, AdminRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { useMemo } from 'react';
@@ -31,7 +32,7 @@ export default function AnalyticsPage() {
     const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
     const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', AdminRole.DepartmentAdmin)), [firestore]);
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', 'in', DepartmentAdminRoles)), [firestore]);
     const { data: departmentAdmins, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const reportsByStatus = useMemo(() => {

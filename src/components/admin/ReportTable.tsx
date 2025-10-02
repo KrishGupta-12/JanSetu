@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -43,9 +44,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle, ThumbsUp } from 'lucide-react';
 import type { Report, UserProfile, Resolution, ReportUrgency, ReportCategory } from '@/lib/types';
-import { ReportStatus, AdminRole } from '@/lib/types';
+import { ReportStatus, AdminRole, DepartmentAdminRoles } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { summarizeAllReports } from '@/lib/actions';
+import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { useToast } from '@/hooks/use-toast';
 import { reportCategories } from '@/lib/data';
 import { Textarea } from '../ui/textarea';
@@ -160,17 +161,33 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const handleGenerateSummary = async () => {
     setIsSummaryLoading(true);
     setSummary('');
-    const result = await summarizeAllReports();
-    if ('summary' in result) {
-      setSummary(result.summary);
-      setIsSummaryDialogOpen(true);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: result.error,
-      });
+
+    if (reports.length === 0) {
+        setSummary("No reports to summarize.");
+        setIsSummaryDialogOpen(true);
+        setIsSummaryLoading(false);
+        return;
     }
+
+    try {
+        const reportsForSummary = reports.map(report => ({
+            category: report.category,
+            description: report.description,
+            location: `${report.latitude}, ${report.longitude}`,
+        }));
+        const result = await summarizeReports({ reports: reportsForSummary });
+        setSummary(result.summary);
+    } catch (e) {
+        console.error(e);
+        setSummary("Failed to generate summary.");
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not generate summary.",
+        });
+    }
+
+    setIsSummaryDialogOpen(true);
     setIsSummaryLoading(false);
   };
   
@@ -328,7 +345,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                                 Assign To
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent>
-                                {allAdmins?.filter(a => a.role === AdminRole.DepartmentAdmin).map(deptAdmin => (
+                                {allAdmins?.filter(a => a.role && DepartmentAdminRoles.includes(a.role)).map(deptAdmin => (
                                   <DropdownMenuItem key={deptAdmin.uid} onClick={() => handleAssignAdmin(report.id, deptAdmin)}>
                                     {deptAdmin.name} ({deptAdmin.department})
                                   </DropdownMenuItem>

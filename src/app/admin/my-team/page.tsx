@@ -1,15 +1,18 @@
+
 'use client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { UserProfile, AdminRole, Report, ReportStatus } from '@/lib/types';
+import { UserProfile, AdminRole, Report, ReportStatus, DepartmentAdminRoles } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+
+const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
 
 function TeamTableSkeleton() {
     return (
@@ -51,7 +54,7 @@ export default function MyTeamPage() {
   const firestore = useFirestore();
 
   useEffect(() => {
-    if (!isUserLoading && (!adminData || adminData.role === AdminRole.SuperAdmin)) {
+    if (!isUserLoading && (!adminData || !adminData.role || !isDepartmentAdmin(adminData.role))) {
       router.push('/admin'); 
     }
   }, [adminData, isUserLoading, router]);

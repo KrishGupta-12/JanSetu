@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -16,17 +17,19 @@ import {
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemo } from 'react';
-import { AdminRole, UserProfile } from '@/lib/types';
+import { AdminRole, UserProfile, DepartmentAdminRoles } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
+const isDepartmentAdmin = (role: AdminRole) => DepartmentAdminRoles.includes(role);
+
 const allMenuItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [AdminRole.SuperAdmin, AdminRole.DepartmentAdmin] },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, roles: [AdminRole.SuperAdmin, ...DepartmentAdminRoles] },
   { href: '/admin/reports', label: 'Reports', icon: Files, roles: [AdminRole.SuperAdmin]},
-  { href: '/admin/my-department', label: 'My Department', icon: Building, roles: [AdminRole.DepartmentAdmin] },
-  { href: '/admin/my-team', label: 'My Team', icon: UserCog, roles: [AdminRole.DepartmentAdmin] },
+  { href: '/admin/my-department', label: 'My Department', icon: Building, roles: DepartmentAdminRoles },
+  { href: '/admin/my-team', label: 'My Team', icon: UserCog, roles: DepartmentAdminRoles },
   { href: '/admin/users', label: 'Users', icon: Users, roles: [AdminRole.SuperAdmin] },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart, roles: [AdminRole.SuperAdmin] },
-  { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [AdminRole.SuperAdmin, AdminRole.DepartmentAdmin] },
+  { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [AdminRole.SuperAdmin, ...DepartmentAdminRoles] },
 ];
 
 function SidebarSkeleton() {

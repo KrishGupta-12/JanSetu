@@ -78,8 +78,18 @@ export type UserProfile = {
 
 export enum AdminRole {
     SuperAdmin = 'super_admin',
-    DepartmentAdmin = 'department_admin'
+    WasteAdmin = 'waste_admin',
+    PotholeAdmin = 'pothole_admin',
+    StreetlightAdmin = 'streetlight_admin',
+    WaterAdmin = 'water_admin'
 }
+
+export const DepartmentAdminRoles = [
+  AdminRole.WasteAdmin,
+  AdminRole.PotholeAdmin,
+  AdminRole.StreetlightAdmin,
+  AdminRole.WaterAdmin
+];
 
 export type AdminCredential = {
     role: AdminRole;
