@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserProfile } from '@/lib/types';
+import { UserProfile, Report, ReportStatus } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useMemoFirebase } from '@/firebase';
@@ -67,23 +67,40 @@ export default function LeaderboardPage() {
         return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
     }, [firestore]);
 
-    const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
-    
-    const leaderboardData = useMemo(() => {
-        if (!users) return [];
-        
-        return users.map(u => ({
-            ...u,
-            score: (Number(u.resolvedReports ?? 0) * 5) + Number(u.totalReports ?? 0),
-        })).sort((a, b) => b.score - a.score);
+    const reportsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'issueReports'));
+    }, [firestore]);
 
-    }, [users]);
+    const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+    const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+
+    const leaderboardData = useMemo(() => {
+        if (!users || !reports) return [];
+        
+        return users.map(u => {
+            const userReports = reports.filter(r => r.citizenId === u.uid);
+            const totalReports = userReports.length;
+            const resolvedReports = userReports.filter(r => r.status === ReportStatus.Resolved).length;
+            const score = (resolvedReports * 5) + totalReports;
+
+            return {
+                ...u,
+                score,
+                totalReports,
+                resolvedReports,
+            };
+        }).sort((a, b) => b.score - a.score);
+
+    }, [users, reports]);
 
     const userRank = useMemo(() => {
         if (!leaderboardData || !user) return null;
         const rank = leaderboardData.findIndex(entry => entry.uid === user.uid);
         return rank !== -1 ? rank + 1 : null;
     }, [leaderboardData, user]);
+
+    const isLoading = usersLoading || reportsLoading;
 
     if (isLoading) {
         return <LeaderboardSkeleton />;
@@ -154,7 +171,7 @@ export default function LeaderboardPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium">
-                                                    {entry.resolvedReports ?? 0} / {entry.totalReports ?? 0}
+                                                    {entry.resolvedReports} / {entry.totalReports}
                                                 </TableCell>
                                             </TableRow>
                                         )
