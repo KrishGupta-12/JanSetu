@@ -41,13 +41,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle } from 'lucide-react';
-import type { Report, Admin, Resolution, ReportUrgency } from '@/lib/types';
+import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle, ThumbsUp } from 'lucide-react';
+import type { Report, Admin, Resolution, ReportUrgency, ReportCategory } from '@/lib/types';
 import { ReportStatus, AdminRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { mockAdmins } from '@/lib/data';
+import { mockAdmins, reportCategories } from '@/lib/data';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -101,15 +101,22 @@ export default function ReportTable({ reports: initialReports, admin }: { report
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [isResolutionFormOpen, setIsResolutionFormOpen] = useState(false);
   const [urgencyFilter, setUrgencyFilter] = useState<ReportUrgency | 'all'>('all');
-  
+  const [categoryFilter, setCategoryFilter] = useState<ReportCategory | 'all'>('all');
+
   const { toast } = useToast();
 
   const allAdmins = mockAdmins;
 
   const filteredReports = useMemo(() => {
-    if (urgencyFilter === 'all') return reports;
-    return reports.filter(r => r.urgency === urgencyFilter);
-  }, [reports, urgencyFilter]);
+    let filtered = reports;
+    if (urgencyFilter !== 'all') {
+      filtered = filtered.filter(r => r.urgency === urgencyFilter);
+    }
+    if (categoryFilter !== 'all') {
+        filtered = filtered.filter(r => r.category === categoryFilter);
+    }
+    return filtered;
+  }, [reports, urgencyFilter, categoryFilter]);
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
     setReports(prevReports => prevReports.map(r => r.id === reportId ? {...r, status} : r));
@@ -210,20 +217,33 @@ export default function ReportTable({ reports: initialReports, admin }: { report
               {admin.role === AdminRole.SuperAdmin ? 'Reports' : 'Assigned Reports'}
             </CardTitle>
           </div>
-          <div className="flex items-center gap-2">
-            {admin.role === AdminRole.DepartmentAdmin && (
-              <Select value={urgencyFilter} onValueChange={(value) => setUrgencyFilter(value as any)}>
+          <div className="flex flex-wrap items-center gap-2">
+             <Select value={urgencyFilter} onValueChange={(value) => setUrgencyFilter(value as any)}>
+                <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by urgency" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Urgencies</SelectItem>
+                    {urgencyLevels.map(level => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+
+            {admin.role === AdminRole.SuperAdmin && (
+              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as any)}>
                   <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by urgency" />
+                      <SelectValue placeholder="Filter by category" />
                   </SelectTrigger>
                   <SelectContent>
-                      <SelectItem value="all">All Urgencies</SelectItem>
-                      {urgencyLevels.map(level => (
-                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {reportCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                   </SelectContent>
               </Select>
             )}
+
             {admin.role === AdminRole.SuperAdmin && reports.length > 0 && (
               <Button onClick={handleGenerateSummary} disabled={isSummaryLoading}>
                 {isSummaryLoading ? (
@@ -243,6 +263,7 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                 <TableRow>
                   <TableHead>ID / Urgency</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Upvotes</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
@@ -263,6 +284,12 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                         )}
                     </TableCell>
                     <TableCell>{report.category}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-1 font-semibold">
+                            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                            {report.upvotes}
+                        </div>
+                    </TableCell>
                     <TableCell className="max-w-xs truncate">{report.description}</TableCell>
                     <TableCell>{report.assignedAdminName || 'Unassigned'}</TableCell>
                     <TableCell>
@@ -316,6 +343,10 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                                 ))}
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
+                             <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleUpdateStatus(report.id, ReportStatus.Rejected)}>
+                                <ShieldX className="mr-2 h-4 w-4" />
+                                Mark as Rejected
+                              </DropdownMenuItem>
                            </>
                           ) : (
                             <>

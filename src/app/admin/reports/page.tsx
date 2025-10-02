@@ -54,7 +54,7 @@ export default function AdminReportsPage() {
             Manage all citizen reports and assign them to departments.
         </p>
       </div>
-      <ReportTable reports={reports || []} admin={adminData} />
+      <ReportTable reports={reports.sort((a,b) => b.upvotes - a.upvotes) || []} admin={adminData} />
     </div>
   );
 }

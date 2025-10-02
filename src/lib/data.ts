@@ -162,6 +162,8 @@ export const mockReports: Report[] = [
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
     urgency: 'Medium',
+    upvotes: 12,
+    citizenIdsWhoUpvoted: ['user-002', 'user-003', 'user-004'],
   },
   {
     id: 'RPT-002',
@@ -176,6 +178,8 @@ export const mockReports: Report[] = [
     assignedAdminId: 'admin-003',
     assignedAdminName: 'Pothole Dept Head',
     urgency: 'High',
+    upvotes: 25,
+    citizenIdsWhoUpvoted: ['user-001', 'user-006', 'user-007', 'user-008'],
   },
   {
     id: 'RPT-003',
@@ -203,7 +207,9 @@ export const mockReports: Report[] = [
       superAdminFeedback: 'Excellent turnaround time. Well done.',
       superAdminRating: 5,
       isApproved: true,
-    }
+    },
+    upvotes: 8,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-004',
@@ -217,6 +223,8 @@ export const mockReports: Report[] = [
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
     urgency: 'High',
+    upvotes: 30,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-005',
@@ -241,7 +249,9 @@ export const mockReports: Report[] = [
       afterImageUrl: 'https://picsum.photos/seed/bench-gone/400/300',
       citizenFeedback: 'Thanks for removing it, but when is the new one coming?',
       citizenRating: 3,
-    }
+    },
+    upvotes: 2,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-006',
@@ -255,6 +265,8 @@ export const mockReports: Report[] = [
     status: ReportStatus.Rejected,
     assignedAdminName: 'Waste Dept Head',
     urgency: 'Low',
+    upvotes: 0,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-007',
@@ -277,7 +289,9 @@ export const mockReports: Report[] = [
       cost: 8000,
       costBreakdown: 'Tar: Rs.5000, Labor: Rs.3000',
       afterImageUrl: 'https://picsum.photos/seed/pothole-patched/400/300',
-    }
+    },
+    upvotes: 5,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-008',
@@ -292,6 +306,8 @@ export const mockReports: Report[] = [
     assignedAdminId: 'admin-004',
     assignedAdminName: 'Streetlight Dept Head',
     urgency: 'Medium',
+    upvotes: 3,
+    citizenIdsWhoUpvoted: [],
   },
    {
     id: 'RPT-009',
@@ -305,6 +321,8 @@ export const mockReports: Report[] = [
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
     urgency: 'High',
+    upvotes: 18,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-010',
@@ -319,6 +337,8 @@ export const mockReports: Report[] = [
     assignedAdminId: 'admin-003',
     assignedAdminName: 'Pothole Dept Head',
     urgency: 'High',
+    upvotes: 7,
+    citizenIdsWhoUpvoted: [],
   },
    {
     id: 'RPT-011',
@@ -332,6 +352,8 @@ export const mockReports: Report[] = [
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
     urgency: 'Medium',
+    upvotes: 9,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-012',
@@ -359,7 +381,9 @@ export const mockReports: Report[] = [
       superAdminFeedback: 'Good use of community resources.',
       superAdminRating: 4,
       isApproved: true,
-    }
+    },
+    upvotes: 4,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-013',
@@ -374,6 +398,8 @@ export const mockReports: Report[] = [
     assignedAdminId: 'admin-004',
     assignedAdminName: 'Streetlight Dept Head',
     urgency: 'Low',
+    upvotes: 1,
+    citizenIdsWhoUpvoted: [],
   },
   {
     id: 'RPT-014',
@@ -388,6 +414,8 @@ export const mockReports: Report[] = [
     assignedAdminId: 'admin-005',
     assignedAdminName: 'Water Dept Head',
     urgency: 'Critical',
+    upvotes: 45,
+    citizenIdsWhoUpvoted: [],
   },
    {
     id: 'RPT-015',
@@ -401,6 +429,8 @@ export const mockReports: Report[] = [
     status: ReportStatus.Pending,
     assignedAdminName: 'Unassigned',
     urgency: 'Critical',
+    upvotes: 50,
+    citizenIdsWhoUpvoted: [],
   },
   ...[...Array(5)].map((_, i) => ({
     id: `RPT-FAKE-${i+1}`,
@@ -415,6 +445,8 @@ export const mockReports: Report[] = [
     assignedAdminId: 'admin-001',
     assignedAdminName: 'Super Admin',
     urgency: 'Low',
+    upvotes: 0,
+    citizenIdsWhoUpvoted: [],
   } as Report)),
 ];
 

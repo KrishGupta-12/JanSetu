@@ -4,11 +4,16 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { mockReports, mockCitizens } from '@/lib/data';
-import { Report, Citizen, ReportStatus } from '@/lib/types';
+import { Report, Citizen, ReportStatus, User } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { ThumbsUp, Eye } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import ReportDetailsDialog from '@/components/dashboard/ReportDetailsDialog';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -45,20 +50,47 @@ function FeedSkeleton() {
 }
 
 export default function CommunityFeedPage() {
+    const { user, isLoading: isUserLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
-    const reports = useMemo(() => {
-        return mockReports
+    const [reports, setReports] = useState<EnrichedReport[]>([]);
+    const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+    const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+
+    useEffect(() => {
+        const enrichedReports = mockReports
             .map(report => {
                 const citizen = mockCitizens.find(c => c.id === report.citizenId);
                 return { ...report, citizen };
             })
             .sort((a, b) => new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime());
+        setReports(enrichedReports);
     }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 500);
         return () => clearTimeout(timer);
     }, []);
+
+    const handleUpvote = (reportId: string) => {
+        if (!user) return;
+        setReports(prevReports =>
+            prevReports.map(report => {
+                if (report.id === reportId && !report.citizenIdsWhoUpvoted.includes(user.id)) {
+                    return {
+                        ...report,
+                        upvotes: report.upvotes + 1,
+                        citizenIdsWhoUpvoted: [...report.citizenIdsWhoUpvoted, user.id],
+                    };
+                }
+                return report;
+            })
+        );
+    };
+
+    const handleViewDetails = (report: Report) => {
+        setSelectedReport(report);
+        setIsDetailViewOpen(true);
+    };
 
     return (
         <div className="space-y-6">
@@ -68,16 +100,16 @@ export default function CommunityFeedPage() {
                     See the latest issues being reported by citizens across the city.
                 </p>
             </div>
-            {isLoading ? <FeedSkeleton /> : (
+            {isLoading || isUserLoading ? <FeedSkeleton /> : (
                  <div className="space-y-6 max-w-3xl mx-auto">
                     {reports.map(report => (
                         <Card key={report.id} className="shadow-md">
-                            <CardHeader className="flex flex-row items-center gap-4">
+                            <CardHeader className="flex flex-row items-start gap-4">
                                 <Avatar className="h-12 w-12">
                                     <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${report.citizen?.name}`} />
                                     <AvatarFallback>{report.citizen?.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <div>
+                                <div className='flex-1'>
                                     <p className="font-semibold">{report.citizen?.name || 'Anonymous'}</p>
                                     <p className="text-sm text-muted-foreground">
                                         {formatDistanceToNow(new Date(report.reportDate), { addSuffix: true })}
@@ -93,11 +125,28 @@ export default function CommunityFeedPage() {
                                         <Image src={report.imageUrl} alt="Report Image" layout="fill" objectFit="cover" />
                                     </div>
                                 )}
+                                <div className="flex items-center justify-between pt-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleUpvote(report.id)}
+                                        disabled={!user || report.citizenIdsWhoUpvoted.includes(user.id)}
+                                    >
+                                        <ThumbsUp className="mr-2 h-4 w-4" />
+                                        Upvote ({report.upvotes})
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(report)}>
+                                        <Eye className="mr-2 h-4 w-4"/> View Details
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     ))}
                  </div>
             )}
+            <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+                <ReportDetailsDialog report={selectedReport} user={user as User | null} onSaveFeedback={() => {}} />
+            </Dialog>
         </div>
     );
 }

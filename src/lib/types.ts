@@ -46,6 +46,8 @@ export type Report = {
   assignedAdminId?: string;
   assignedAdminName?: string;
   resolution?: Resolution;
+  upvotes: number;
+  citizenIdsWhoUpvoted: string[];
 };
 
 export type AqiSensor = {
