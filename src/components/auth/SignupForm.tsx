@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { Textarea } from '../ui/textarea';
 import { seedAdminUsers } from '@/lib/seed';
 import { generateJanId } from '@/lib/utils';
@@ -54,7 +54,6 @@ export function SignupForm() {
   const [isSeeding, setIsSeeding] = useState(true);
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -78,7 +77,6 @@ export function SignupForm() {
 
   const runSeed = useCallback(async () => {
     if (auth && firestore) {
-      // Temporarily disable persistence to avoid interfering with current user state
       await seedAdminUsers(auth, firestore);
     }
     setIsSeeding(false);
@@ -86,24 +84,14 @@ export function SignupForm() {
 
 
   useEffect(() => {
-    // This effect should only redirect if the user is already logged in when visiting the page.
-    if (!isUserLoading && user) {
-        // A user is already logged in, redirect them.
-        router.push('/dashboard');
-        return;
+    // This check ensures seeding only runs once per session.
+    if (sessionStorage.getItem('seeding_completed') !== 'true') {
+      runSeed();
+      sessionStorage.setItem('seeding_completed', 'true');
+    } else {
+      setIsSeeding(false);
     }
-    
-    // If no user and not loading, proceed to check for seeding.
-    if (!isUserLoading && !user) {
-        if (sessionStorage.getItem('seeding_run') !== 'true') {
-            runSeed();
-            sessionStorage.setItem('seeding_run', 'true');
-        } else {
-            setIsSeeding(false);
-        }
-    }
-
-  }, [user, isUserLoading, router, runSeed]);
+  }, [runSeed]);
 
 
   useEffect(() => {
@@ -115,6 +103,15 @@ export function SignupForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    if (!auth || !firestore) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Firebase not initialized. Please try again later.'
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
 
       const janId = await generateJanId(firestore, 'citizen');
@@ -179,7 +176,7 @@ export function SignupForm() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 100 }, (_, i) => (currentYear - 18 - i).toString());
   
-  if (isUserLoading || isSeeding) {
+  if (isSeeding) {
     return (
         <div className="flex flex-col items-center justify-center space-y-4 p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -269,7 +266,7 @@ export function SignupForm() {
                      <Select onValueChange={setDobYear} value={dobYear}>
                         <SelectTrigger>
                             <SelectValue placeholder="Year" />
-                        </SelectTrigger>
+                        </Trigger>
                         <SelectContent>
                              {years.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
                         </SelectContent>

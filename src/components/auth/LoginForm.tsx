@@ -16,8 +16,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import { useState, useEffect } from 'react';
+import { useAuth, useFirestore } from '@/firebase';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -36,7 +36,6 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -47,24 +46,18 @@ export function LoginForm() {
       password: '',
     },
   });
-  
-  useEffect(() => {
-    if (!isUserLoading && user) {
-       const checkAdminStatus = async () => {
-        const adminRef = doc(firestore, 'admins', user.uid);
-        const adminSnap = await getDoc(adminRef);
-        if (adminSnap.exists()) {
-          router.push('/admin');
-        } else {
-          router.push('/dashboard');
-        }
-      };
-      checkAdminStatus();
-    }
-  }, [user, isUserLoading, router, firestore]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    if (!auth || !firestore) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Firebase not initialized. Please try again later.'
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const loggedInUser = userCredential.user;
