@@ -1,4 +1,3 @@
-
 'use client';
 
 import { UserProfile, Report, ReportStatus, UserRole } from '@/lib/types';
@@ -26,18 +25,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { ShieldAlert, MoreHorizontal, Ban, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { add } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, orderBy, where } from 'firebase/firestore';
+import { collection, query, doc, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type EnrichedCitizen = UserProfile & {
-  rejectedReports: number;
-  isFlagged: boolean;
   isBanned: boolean;
 };
 
@@ -80,7 +77,7 @@ function UserTableSkeleton() {
 function UserRow({ citizen, onBan, onUnban, banDurations }: { citizen: EnrichedCitizen, onBan: any, onUnban: any, banDurations: any[] }) {
     
     return (
-        <TableRow className={citizen.isFlagged && !citizen.isBanned ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+        <TableRow>
             <TableCell>
                 <div className="flex items-center gap-3">
                     <Avatar>
@@ -89,11 +86,6 @@ function UserRow({ citizen, onBan, onUnban, banDurations }: { citizen: EnrichedC
                     </Avatar>
                     <div className="flex items-center gap-2">
                         <span className="font-medium">{citizen.name}</span>
-                        {citizen.isFlagged && (
-                            <Badge variant="destructive" className="items-center gap-1">
-                                <ShieldAlert className="h-3 w-3" /> Flagged
-                            </Badge>
-                        )}
                         {citizen.isBanned && (
                             <Badge variant="destructive" className="items-center gap-1">
                                 <Ban className="h-3 w-3" /> Banned
@@ -159,30 +151,20 @@ export default function UsersPage() {
   const { toast } = useToast();
   
   const citizensQuery = useMemoFirebase(() => {
-    // This query is now correctly gated. It will only execute if the user is a Super Admin.
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) {
       return null;
     }
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore, adminUser]);
-  const { data: citizens, isLoading: citizensLoading, error } = useCollection<UserProfile>(citizensQuery);
-
-  const reportsQuery = useMemoFirebase(() => {
-    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
-    return query(collection(firestore, 'issueReports'));
-  }, [firestore, adminUser]);
-  const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+  const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
 
   const enrichedCitizens = useMemo(() => {
-      if (!citizens || !reports) return [];
+      if (!citizens) return [];
       return citizens.map(citizen => {
-          const userReports = reports.filter(report => report.citizenId === citizen.uid);
-          const rejected = userReports.filter(report => report.status === ReportStatus.Rejected).length;
-          const flagged = rejected >= 5;
           const banned = !!citizen.bannedUntil && (citizen.bannedUntil === 'lifetime' || new Date(citizen.bannedUntil) > new Date());
-          return { ...citizen, isBanned: banned, rejectedReports: rejected, isFlagged: flagged };
+          return { ...citizen, isBanned: banned };
       });
-  }, [citizens, reports]);
+  }, [citizens]);
 
   const handleBan = (citizenId: string, duration: Duration | 'lifetime') => {
     if (!firestore) return;
@@ -221,7 +203,7 @@ export default function UsersPage() {
     { label: 'Lifetime', duration: 'lifetime' as const },
   ];
 
-  const isLoadingPage = isUserLoading || citizensLoading || reportsLoading;
+  const isLoadingPage = isUserLoading || citizensLoading;
 
   if (isLoadingPage) {
     return <UserTableSkeleton />;
