@@ -10,7 +10,7 @@ import { Skeleton } from '../ui/skeleton';
 import { LogOut, UserCircle } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 
-export default function Header() {
+function HeaderAuth() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
@@ -23,13 +23,57 @@ export default function Header() {
   const { data: adminData } = useDoc(adminRef);
   const isAdmin = !!adminData;
 
-
   const handleSignOut = async () => {
     const auth = getAuth();
     await signOut(auth);
     router.push('/');
   };
 
+  if (isUserLoading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Skeleton className="h-8 w-20 rounded-md" />
+        <Skeleton className="h-8 w-20 rounded-md" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <>
+        <Button variant="ghost" asChild>
+          <Link href="/dashboard">Dashboard</Link>
+        </Button>
+        {isAdmin && (
+          <Button variant="ghost" asChild>
+            <Link href="/admin">Admin</Link>
+          </Button>
+        )}
+        <Button variant="ghost" asChild>
+          <Link href="/profile">
+            <UserCircle /> Profile
+          </Link>
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
+          <LogOut />
+        </Button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Button variant="ghost" asChild>
+        <Link href="/login">Login</Link>
+      </Button>
+      <Button asChild>
+        <Link href="/signup">Sign Up</Link>
+      </Button>
+    </>
+  );
+}
+
+export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
@@ -39,38 +83,7 @@ export default function Header() {
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-          {isUserLoading ? (
-            <div className="flex items-center space-x-2">
-              <Skeleton className="h-8 w-20 rounded-md" />
-              <Skeleton className="h-8 w-20 rounded-md" />
-            </div>
-          ) : user ? (
-            <>
-              <Button variant="ghost" asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-              {isAdmin && (
-                <Button variant="ghost" asChild>
-                  <Link href="/admin">Admin</Link>
-                </Button>
-              )}
-              <Button variant="ghost" asChild>
-                <Link href="/profile"><UserCircle/> Profile</Link>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
-                 <LogOut />
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" asChild>
-                <Link href="/login">Login</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/signup">Sign Up</Link>
-              </Button>
-            </>
-          )}
+          <HeaderAuth />
         </div>
       </div>
     </header>
