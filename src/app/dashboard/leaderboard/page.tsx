@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserProfile, LeaderboardEntry } from '@/lib/types';
+import { UserProfile } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useMemoFirebase } from '@/firebase';
@@ -22,39 +22,42 @@ const getContributionLevel = (score: number) => {
 
 function LeaderboardSkeleton() {
     return (
-        <Card>
-            <CardHeader>
-                 <Skeleton className="h-8 w-48" />
-                 <Skeleton className="h-4 w-64" />
-            </CardHeader>
-            <CardContent>
-                 <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
-                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
-                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
-                                <TableHead><Skeleton className="h-6 w-full" /></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-10 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
+                                    <TableHead><Skeleton className="h-6 w-full" /></TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                 </div>
-            </CardContent>
-        </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-10 w-full" /></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     )
 }
-
 
 export default function LeaderboardPage() {
     const { user, firestore } = useAuth();
@@ -71,7 +74,8 @@ export default function LeaderboardPage() {
         
         return users.map(u => ({
             ...u,
-            score: (u.resolvedReports * 5) + u.totalReports,
+            // Calculate score based on the fields from the user document
+            score: ((u.resolvedReports || 0) * 5) + (u.totalReports || 0),
         })).sort((a, b) => b.score - a.score);
 
     }, [users]);
@@ -95,13 +99,13 @@ export default function LeaderboardPage() {
                 </p>
             </div>
             
-            {user && (
+            {user && user.role === UserRole.Citizen && (
                 <Card>
                     <CardHeader>
                         <CardTitle>My Rank</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {userRank ? (
+                        {userRank !== null ? (
                              <p className="text-lg">You are ranked <span className="font-bold text-primary">#{userRank}</span> on the leaderboard. Keep up the great work!</p>
                         ) : (
                             <p className="text-muted-foreground">Your rank isn't in the top contributors yet. Submit a report to get on the board!</p>
@@ -151,7 +155,7 @@ export default function LeaderboardPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium">
-                                                    {entry.resolvedReports} / {entry.totalReports}
+                                                    {entry.resolvedReports || 0} / {entry.totalReports || 0}
                                                 </TableCell>
                                             </TableRow>
                                         )
