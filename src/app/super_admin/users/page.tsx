@@ -195,7 +195,7 @@ export default function UsersPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {user.resolvedReports || 0} / {user.totalReports || 0}
+                            {user.resolvedReports ?? 0} / {user.totalReports ?? 0}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" onClick={() => handleOpenManageDialog(user)}>
