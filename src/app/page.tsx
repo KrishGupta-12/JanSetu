@@ -2,20 +2,20 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, BarChart, Bell, MapPin, Shield, Users } from 'lucide-react';
+import { ArrowRight, FilePlus, Bell, MapPin, Shield, Users } from 'lucide-react';
 import Image from 'next/image';
 import Logo from '@/components/common/Logo';
 
 const features = [
   {
-    icon: <BarChart className="h-10 w-10 text-primary" />,
-    title: 'Live Air Quality Index',
-    description: 'Stay informed about the air you breathe with real-time AQI data from sensors across the city.',
+    icon: <FilePlus className="h-10 w-10 text-primary" />,
+    title: 'Report Civic Issues',
+    description: 'Quickly report problems like potholes or waste buildup with our easy-to-use form.',
   },
   {
     icon: <Bell className="h-10 w-10 text-primary" />,
-    title: 'Disaster Alerts',
-    description: 'Receive timely alerts and updates about local emergencies and potential disasters to ensure your safety.',
+    title: 'Platform Alerts',
+    description: 'Receive timely alerts from city administration about service disruptions or local emergencies.',
   },
   {
     icon: <Users className="h-10 w-10 text-primary" />,

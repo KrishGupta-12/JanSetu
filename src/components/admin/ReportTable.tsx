@@ -42,11 +42,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle, ThumbsUp } from 'lucide-react';
+import { MoreHorizontal, Loader2, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle, ThumbsUp } from 'lucide-react';
 import type { Report, UserProfile, Resolution, ReportUrgency, ReportCategory } from '@/lib/types';
 import { ReportStatus, AdminRole, DepartmentAdminRoles } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { summarizeReports } from '@/ai/flows/summarize-reports';
 import { useToast } from '@/hooks/use-toast';
 import { reportCategories } from '@/lib/data';
 import { Textarea } from '../ui/textarea';
@@ -99,9 +98,6 @@ const StarRating = ({ rating, setRating, disabled }: { rating: number, setRating
 )
 
 export default function ReportTable({ reports, admin }: { reports: Report[], admin: UserProfile }) {
-  const [summary, setSummary] = useState('');
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [isResolutionFormOpen, setIsResolutionFormOpen] = useState(false);
@@ -164,39 +160,6 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
       description: `Report has been assigned to ${assignedAdmin.name}.`
     });
   }
-
-  const handleGenerateSummary = async () => {
-    setIsSummaryLoading(true);
-    setSummary('');
-
-    if (reports.length === 0) {
-        setSummary("No reports to summarize.");
-        setIsSummaryDialogOpen(true);
-        setIsSummaryLoading(false);
-        return;
-    }
-
-    try {
-        const reportsForSummary = reports.map(report => ({
-            category: report.category,
-            description: report.description,
-            location: report.locationAddress,
-        }));
-        const result = await summarizeReports({ reports: reportsForSummary });
-        setSummary(result.summary);
-    } catch (e) {
-        console.error(e);
-        setSummary("Failed to generate summary.");
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not generate summary.",
-        });
-    }
-
-    setIsSummaryDialogOpen(true);
-    setIsSummaryLoading(false);
-  };
   
   const handleViewDetails = (report: Report) => {
       setSelectedReport(report);
@@ -273,17 +236,6 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                       ))}
                   </SelectContent>
               </Select>
-            )}
-
-            {admin.role === AdminRole.SuperAdmin && reports.length > 0 && (
-              <Button onClick={handleGenerateSummary} disabled={isSummaryLoading}>
-                {isSummaryLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                Generate Summary
-              </Button>
             )}
           </div>
         </CardHeader>
@@ -406,20 +358,6 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
           </div>
         </CardContent>
       </Card>
-
-      <AlertDialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>AI-Generated Report Summary</AlertDialogTitle>
-            <AlertDialogDescription className="text-foreground whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
-              {summary}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsSummaryDialogOpen(false)}>Close</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       
       <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">

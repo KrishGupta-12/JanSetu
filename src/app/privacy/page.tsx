@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
             <h4 className="font-semibold">Types of Data Collected:</h4>
             <ul className="list-disc list-inside">
                 <li><strong>Personal Data:</strong> While using our Service, we may ask you to provide us with certain personally identifiable information, including but not limited to: Email address, Full Name, and Phone Number.</li>
-                <li><strong>Report Data:</strong> When you submit a report, we collect the information you provide, such as the description, category, attached photo, and the precise geolocation (latitude and longitude) of the issue.</li>
+                <li><strong>Report Data:</strong> When you submit a report, we collect the information you provide, such as the description, category, and attached photo.</li>
                 <li><strong>Usage Data:</strong> We may also collect information that your browser sends whenever you visit our Service or when you access the Service by or through a mobile device.</li>
             </ul>
             
@@ -46,7 +46,7 @@ export default function PrivacyPolicyPage() {
               <li>To display reports publicly on our map and community feed to promote transparency.</li>
               <li>To notify you about the status of your reported issues.</li>
               <li>To analyze data to improve the Service's functionality and user experience.</li>
-              <li>To send disaster alerts based on your geographical area.</li>
+              <li>To send platform alerts.</li>
             </ul>
             
             <h3 className="text-xl font-semibold pt-4">3. Publicly Shared Information and Privacy</h3>
@@ -54,7 +54,6 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc list-inside">
               <li>Your name is associated with the reports you submit on the Community Feed.</li>
               <li>The location, description, category, and photo of a report are made public.</li>
-              <li><strong>Face Blurring:</strong> To protect the privacy of individuals, our system uses AI to automatically detect and blur any faces in the photos you upload. While we strive for accuracy, this process is automated and may not be perfect.</li>
             </ul>
             <p>Your personal contact information, such as your email and phone number, is never shared publicly.</p>
 

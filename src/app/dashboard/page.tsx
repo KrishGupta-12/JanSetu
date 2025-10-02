@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import AqiCard from '@/components/home/AqiCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
@@ -56,13 +55,13 @@ export default function DashboardPage() {
       router.push('/login');
     }
      if (!isUserLoading && user && user.role) { // Any role indicates an admin
-      router.push('/admin');
+      if(user.role !== 'citizen') router.push('/admin');
     }
   }, [user, isUserLoading, router]);
 
   const isLoading = isUserLoading || isReportsLoading || areAllReportsLoading;
 
-  if (isLoading || !user || user.role) {
+  if (isLoading || !user || user.role !== 'citizen') {
     return (
        <div className="flex-1 w-full p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
@@ -88,31 +87,28 @@ export default function DashboardPage() {
             </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AqiCard />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Trophy className="text-yellow-500" /> Leaderboard</CardTitle>
-                        <CardDescription>See top community contributors.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <Button asChild className="w-full">
-                        <Link href="/dashboard/leaderboard">View Leaderboard</Link>
-                    </Button>
-                    </CardContent>
-                </Card>
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Megaphone /> Community Feed</CardTitle>
-                        <CardDescription>View live reports from citizens.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <Button asChild className="w-full">
-                        <Link href="/dashboard/feed">View Feed</Link>
-                    </Button>
-                    </CardContent>
-                </Card>
-            </div>
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Trophy className="text-yellow-500" /> Leaderboard</CardTitle>
+                    <CardDescription>See top community contributors.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Button asChild className="w-full">
+                    <Link href="/dashboard/leaderboard">View Leaderboard</Link>
+                </Button>
+                </CardContent>
+            </Card>
+            <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Megaphone /> Community Feed</CardTitle>
+                    <CardDescription>View live reports from citizens.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <Button asChild className="w-full">
+                    <Link href="/dashboard/feed">View Feed</Link>
+                </Button>
+                </CardContent>
+            </Card>
         </div>
 
        <Card className="flex-1 shadow-lg h-full mt-6">

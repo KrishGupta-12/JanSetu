@@ -8,8 +8,8 @@ import { ArrowRight, BarChart, Bell, Shield, Users, Sparkles, ThumbsUp, Award, M
 const features = [
   {
     icon: <Sparkles className="h-10 w-10 text-primary" />,
-    title: 'AI-Powered Classification',
-    description: 'Our Genkit-powered AI automatically analyzes report descriptions to assign a relevant category and urgency level, streamlining the dispatch process.',
+    title: 'Streamlined Reporting',
+    description: 'A simple and intuitive form allows citizens to report civic issues quickly and efficiently.',
   },
   {
     icon: <ThumbsUp className="h-10 w-10 text-primary" />,
@@ -30,11 +30,6 @@ const features = [
     icon: <Award className="h-10 w-10 text-primary" />,
     title: 'Gamified Leaderboard',
     description: 'A community leaderboard recognizes and rewards the most active and impactful citizens, encouraging continuous engagement.',
-  },
-  {
-    icon: <Shield className="h-10 w-10 text-primary" />,
-    title: 'Privacy-First Image Moderation',
-    description: 'To protect privacy, our AI automatically detects and blurs faces in any images uploaded with a report.',
   },
   {
     icon: <Bell className="h-10 w-10 text-primary" />,

@@ -2,7 +2,6 @@
 'use server';
 
 import { z } from 'zod';
-import { moderateImage } from '@/ai/flows/image-moderation';
 import { initializeAdminApp } from '@/firebase/server-init';
 import { ReportCategory, ReportStatus } from './types';
 
@@ -44,25 +43,19 @@ export async function submitReport(
   const { firestore } = await initializeAdminApp();
 
   try {
-    let finalImageUrl = '';
-    if (photo && photo.startsWith('data:image')) {
-      const moderationResult = await moderateImage({ photoDataUri: photo });
-      finalImageUrl = moderationResult.moderatedPhotoDataUri;
-    }
-
     const reportData = {
       citizenId,
       complainantName,
       complainantPhone,
       locationAddress,
       description,
-      imageUrl: finalImageUrl,
+      imageUrl: photo || '',
       category,
       reportDate: new Date().toISOString(),
       status: ReportStatus.Pending,
       upvotes: 0,
       citizenIdsWhoUpvoted: [],
-      // Urgency will be set by an admin
+      urgency: 'Medium', // Default urgency, admin can change
     };
 
     const reportsCollection = firestore.collection('issueReports');

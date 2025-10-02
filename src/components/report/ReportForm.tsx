@@ -247,7 +247,7 @@ export default function ReportForm() {
                 </div>
             </FormControl>
             <FormDescription>
-                A photo helps us understand the issue better. Faces will be automatically blurred for privacy.
+                A photo helps us understand the issue better.
             </FormDescription>
             <input type="hidden" {...form.register('photo')} />
             <FormMessage />
