@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -26,7 +27,7 @@ const allMenuItems = [
   { href: '/super_admin', label: 'Dashboard', icon: Shield, roles: [UserRole.SuperAdmin] },
   { href: '/super_admin/reports', label: 'All Reports', icon: Files, roles: [UserRole.SuperAdmin] },
   { href: '/admin/my-department', label: 'My Department', icon: Building, roles: DepartmentAdminRoles },
-  { href: '/super_admin/users', label: 'Users', icon: Users, roles: [UserRole.SuperAdmin] },
+  { href: '/super_admin/department-stats', label: 'Department Stats', icon: Users, roles: [UserRole.SuperAdmin] },
   { href: '/super_admin/analytics', label: 'Analytics', icon: BarChart, roles: [UserRole.SuperAdmin] },
   { href: '/admin/alerts', label: 'Alerts', icon: Megaphone, roles: [UserRole.SuperAdmin, ...DepartmentAdminRoles] },
 ];
