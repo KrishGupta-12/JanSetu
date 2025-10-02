@@ -67,14 +67,21 @@ export function SignupForm() {
 
       const janId = await generateJanId(firestore, 'citizen');
 
+      // Corrected: Use the 'citizens' collection
       const citizenRef = doc(firestore, 'citizens', newUser.uid);
+      
+      // Corrected: Include all required fields for the Citizen entity
       await setDoc(citizenRef, {
         id: newUser.uid,
         janId,
         name: values.name,
         email: values.email,
-        phone: '',
+        phone: '', // Initialize phone as empty string
         dateJoined: new Date().toISOString(),
+        address: '',
+        city: '',
+        state: '',
+        dob: ''
       });
 
       router.push('/dashboard');
