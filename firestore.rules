@@ -1,70 +1,73 @@
 /**
- * @fileoverview Firestore Security Rules for the Citizen Engagement Platform.
- *
- * Core Philosophy:
- * This ruleset employs a hybrid security model, balancing open access for public content with strict ownership and role-based access controls for user data and administrative functions.
- *
- * Data Structure:
- * - `/users/{userId}`: Stores user profiles. Access is restricted to the user themselves.
- * - `/issueReports/{reportId}`: Stores issue reports. Read access is public, but writes are restricted to the report creator and authorized admins.
- * - `/admins/{email}`: Stores admin credentials. This collection is intended for backend use only and is not directly accessible to clients.
- * - `/alerts/{alertId}`: Stores platform alerts. Read access is public; write access is restricted to admins.
- *
- * Key Security Decisions:
- * - User listing is disallowed to protect privacy.
- * - Admin credentials are not directly accessible from the client.
- * - Write access to issue reports is restricted to the creating user and authorized admins.
- *
- * Denormalization for Authorization:
- * - Issue reports denormalize the `citizenId` to enable ownership-based access control.
+ * @file Firestore Security Rules
+ * @core This ruleset enforces a strict user-ownership model for user profiles and issue reports,
+ *       admin-only access for managing administrator credentials and platform alerts, and
+ *       public read access for issue reports.
+ * @data All user profiles are stored under `/users/{userId}`, issue reports are stored under `/issueReports/{reportId}`,
+ *       administrator credentials are stored under `/admins/{email}`, and platform alerts are stored under `/alerts/{alertId}`.
+ * @security
+ *   - Users can only read and write their own profile data.
+ *   - Issue reports are publicly readable but can only be created by authenticated users, and
+ *     updated/deleted only by the owner.
+ *   - Administrator credentials can only be managed by super admins.
+ *   - Platform alerts can only be created by administrators.
+ * @denormalization
+ *   - Issue reports have `citizenId` field, which is used to control write access for the report creator.
+ *   - Alerts have `adminId` which represents the user who created the alert.
+ * @segregation Public vs private data is managed through the top-level collections and ownership.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure user profiles. Only the authenticated user can read or write their own profile.
+     * @description Manages user profiles. Users can read and write their own profile data.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user123' creates a profile document with document ID 'user123'.
-     * @deny (create) User with UID 'user123' tries to create a profile document with document ID 'user456'.
-     * @allow (get, update, delete) User with UID 'user123' reads/updates/deletes their own profile document 'user123'.
-     * @deny (get, update, delete) User with UID 'user123' tries to read/update/delete profile document 'user456'.
-     * @principle Enforces strict user-ownership for profile data.
+     * @allow (create) - Authenticated user with UID matching the document ID can create their profile.
+     * @allow (get, list, update, delete) - Authenticated user can read and modify their own profile.
+     * @deny (create) - User tries to create a profile with an ID that doesn't match their UID.
+     * @deny (get, list, update, delete) - User tries to read or modify another user's profile.
+     * @principle Enforces user-ownership for profile data and prevents unauthorized access.
      */
     match /users/{userId} {
       function isSignedIn() {
         return request.auth != null;
       }
+
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
+
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
 
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get, list: if isOwner(userId);
       allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uid == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure issue reports. Publicly readable, but only the author or an admin can modify them.
+     * @description Manages issue reports. Reports are publicly readable, but creation is restricted to authenticated users.
+     *              Updates and deletes are restricted to the report creator.
      * @path /issueReports/{reportId}
-     * @allow (get, list) Any user can read issue reports.
-     * @allow (create) User creates a report with their own UID in the 'citizenId' field.
-     * @deny (create) User creates a report with a mismatched 'citizenId' field.
-     * @allow (update, delete) User updates/deletes their own report (identified by 'citizenId' field).
-     * @principle Allows public read access while enforcing ownership for writes.
+     * @allow (get, list) - Any user can read any issue report.
+     * @allow (create) - Authenticated user can create an issue report. The `citizenId` field must match their UID.
+     * @allow (update, delete) - The user who created the report can modify or delete it.
+     * @deny (create) - User tries to create a report with a `citizenId` that doesn't match their UID.
+     * @deny (update, delete) - User tries to modify or delete an issue report they didn't create.
+     * @principle Allows public read access for issue reports while enforcing ownership for modifications.
      */
     match /issueReports/{reportId} {
       function isSignedIn() {
         return request.auth != null;
       }
+
       function isOwner(citizenId) {
         return request.auth.uid == citizenId;
       }
+
       function isExistingOwner(citizenId) {
         return isOwner(citizenId) && resource != null;
       }
@@ -75,26 +78,60 @@ service cloud.firestore {
       allow delete: if isExistingOwner(resource.data.citizenId);
     }
 
-     /**
-      * @description Secure admin credentials. This collection is NOT directly client-accessible.
-      * @path /admins/{email}
-      * @deny (get, list, create, update, delete) No direct client access allowed.
-      * @principle Restricts access to admin credentials for backend use only.
-      */
+    /**
+     * @description Manages administrator credentials. Only super admins can manage admin credentials.
+     * @path /admins/{email}
+     * @allow (get, list) - Only Super Admins can list and get admins.
+     * @allow (create, update, delete) - Only Super Admins can create, update and delete admins.
+     * @deny (get, list, create, update, delete) - Any user who is not a super admin cannot list, get, create, update or delete admins.
+     * @principle Restricts admin management to super admins.
+     */
     match /admins/{email} {
-      allow get, list, create, update, delete: if false;
+        function isSignedIn() {
+          return request.auth != null;
+        }
+
+        function isAdmin() {
+            return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
+        }
+
+        function isExistingAdmin() {
+          return isAdmin() && resource != null;
+        }
+
+        allow get, list: if isAdmin();
+        allow create: if isAdmin();
+        allow update: if isExistingAdmin();
+        allow delete: if isExistingAdmin();
     }
 
     /**
-     * @description Secure platform alerts. Publicly readable, but only admins can create them.
+     * @description Manages platform alerts. Only admins can create alerts.
      * @path /alerts/{alertId}
-     * @allow (get, list) Any user can read platform alerts.
-     * // TODO: Add owner validation once the schema is updated with an ownership field.
-     * @principle Allows public read access while restricting write access to admins.
+     * @allow (get, list) - Any user can read alerts.
+     * @allow (create) - Only admins can create alerts, ensuring `adminId` matches their UID.
+     * @allow (update, delete) - No one can update or delete an alert after it's created.
+     * @deny (create) - Non-admin users cannot create alerts. Admin users cannot create an alert if `adminId` does not match their UID.
+     * @deny (update, delete) - No one can update or delete an alert.
+     * @principle Restricts alert creation to authorized administrators.
      */
     match /alerts/{alertId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'
+         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'waste_admin'
+         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'pothole_admin'
+         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'streetlight_admin'
+         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'water_admin');
+      }
+
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

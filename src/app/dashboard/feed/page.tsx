@@ -1,5 +1,6 @@
+
 'use client';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Dialog } from '@/components/ui/dialog';
 import ReportDetailsDialog from '@/components/dashboard/ReportDetailsDialog';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, orderBy, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const statusStyles: { [key in ReportStatus]: string } = {
@@ -59,22 +60,8 @@ export default function CommunityFeedPage() {
     }, [firestore]);
     const { data: reports, isLoading: isReportsLoading } = useCollection<Report>(reportsQuery);
 
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'users');
-    }, [firestore]);
-    const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
-
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
-
-    const enrichedReports = useMemo(() => {
-        if (!reports || !users) return [];
-        return reports.map(report => {
-            const citizen = users.find(u => u.uid === report.citizenId);
-            return { ...report, citizenName: citizen?.name || 'Anonymous' };
-        });
-    }, [reports, users]);
 
     const handleUpvote = (reportId: string) => {
         if (!user || !firestore) return;
@@ -113,7 +100,7 @@ export default function CommunityFeedPage() {
         setIsDetailViewOpen(true);
     };
 
-    const isLoading = isUserLoading || isReportsLoading || isUsersLoading;
+    const isLoading = isUserLoading || isReportsLoading;
 
     return (
         <div className="space-y-6">
@@ -125,15 +112,15 @@ export default function CommunityFeedPage() {
             </div>
             {isLoading ? <FeedSkeleton /> : (
                  <div className="space-y-6 max-w-3xl mx-auto">
-                    {enrichedReports.map(report => (
+                    {reports?.map(report => (
                         <Card key={report.id} className="shadow-md">
                             <CardHeader className="flex flex-row items-start gap-4">
                                 <Avatar className="h-12 w-12">
-                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${report.citizenName}`} />
-                                    <AvatarFallback>{report.citizenName ? report.citizenName.charAt(0) : 'A'}</AvatarFallback>
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${report.complainantName}`} />
+                                    <AvatarFallback>{report.complainantName ? report.complainantName.charAt(0) : 'A'}</AvatarFallback>
                                 </Avatar>
                                 <div className='flex-1'>
-                                    <p className="font-semibold">{report.citizenName}</p>
+                                    <p className="font-semibold">{report.complainantName}</p>
                                     <p className="text-sm text-muted-foreground">
                                         {report.reportDate ? formatDistanceToNow(new Date(report.reportDate), { addSuffix: true }) : 'Just now'}
                                     </p>
