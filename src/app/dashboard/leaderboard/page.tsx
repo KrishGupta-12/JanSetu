@@ -95,7 +95,7 @@ export default function LeaderboardPage() {
                         {userRank ? (
                              <p className="text-lg">You are ranked <span className="font-bold text-primary">#{userRank}</span> on the leaderboard. Keep up the great work!</p>
                         ) : (
-                            <p className="text-muted-foreground">Your rank isn't in the top 20 yet. Submit a report to get on the board!</p>
+                            <p className="text-muted-foreground">Your rank isn't in the top contributors yet. Submit a report to get on the board!</p>
                         )}
                     </CardContent>
                 </Card>
@@ -119,33 +119,41 @@ export default function LeaderboardPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {leaderboardData.map((entry, index) => {
-                                    const { icon, color, level } = getContributionLevel(entry.score);
-                                    return (
-                                        <TableRow key={entry.uid} className={index < 3 ? 'bg-secondary' : ''}>
-                                            <TableCell className="font-bold text-lg">{index + 1}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar>
-                                                        <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${entry.name}`} />
-                                                        <AvatarFallback>{entry.name.charAt(0)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium">{entry.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-xl">{entry.score}</TableCell>
-                                            <TableCell>
-                                                <div className={`flex items-center gap-2 font-semibold ${color}`}>
-                                                    {icon}
-                                                    <span>{level}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium">
-                                                {entry.resolvedReports} / {entry.totalReports}
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })}
+                                {leaderboardData && leaderboardData.length > 0 ? (
+                                    leaderboardData.map((entry, index) => {
+                                        const { icon, color, level } = getContributionLevel(entry.score);
+                                        return (
+                                            <TableRow key={entry.uid} className={index < 3 ? 'bg-secondary' : ''}>
+                                                <TableCell className="font-bold text-lg">{index + 1}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar>
+                                                            <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${entry.name}`} />
+                                                            <AvatarFallback>{entry.name.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="font-medium">{entry.name}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-xl">{entry.score}</TableCell>
+                                                <TableCell>
+                                                    <div className={`flex items-center gap-2 font-semibold ${color}`}>
+                                                        {icon}
+                                                        <span>{level}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">
+                                                    {entry.resolvedReports} / {entry.totalReports}
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                            The leaderboard is currently empty. Be the first to contribute!
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
