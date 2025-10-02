@@ -17,7 +17,7 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { add, format, formatDistanceToNow } from 'date-fns';
+import { add, format } from 'date-fns';
 
 function UserTableSkeleton() {
   return (
@@ -171,26 +171,18 @@ export default function UsersPage() {
                 <DialogTitle>Manage {selectedUser.name}</DialogTitle>
                 <DialogDescription>
                   Review user details and apply account actions.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4 space-y-4">
-                  <div className="text-sm">
-                      <p><span className="font-semibold">Email:</span> {selectedUser.email}</p>
-                      <p><span className="font-semibold">Phone:</span> {selectedUser.phone}</p>
-                      <p><span className="font-semibold">Address:</span> {selectedUser.address}</p>
-                      <p><span className="font-semibold">Joined:</span> {formatDistanceToNow(new Date(selectedUser.dateJoined), { addSuffix: true })}</p>
-                  </div>
                   {selectedUser.bannedUntil && new Date(selectedUser.bannedUntil) > new Date() && (
-                      <p className="text-sm text-destructive font-medium">
+                      <p className="text-sm text-destructive font-medium pt-2">
                           This user is banned until {format(new Date(selectedUser.bannedUntil), 'PPP')}.
                       </p>
                   )}
-              </div>
-              <DialogFooter className="sm:justify-start gap-2">
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="sm:justify-start gap-2 pt-4">
                 <Button onClick={handleBanUser} variant="destructive">
                   <Ban className="mr-2 h-4 w-4" /> Ban for 60 Days
                 </Button>
-                <Button onClick={handleRemoveBan} variant="outline">
+                <Button onClick={handleRemoveBan} variant="outline" disabled={!selectedUser.bannedUntil || new Date(selectedUser.bannedUntil) < new Date()}>
                   <UserCheck className="mr-2 h-4 w-4" /> Remove Ban
                 </Button>
                  <DialogClose asChild>
