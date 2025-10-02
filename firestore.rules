@@ -1,123 +1,103 @@
 /**
- * @fileoverview Firestore Security Rules for the JanSetu application.
+ * @fileoverview Firestore Security Rules for JanSetu application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and issue reports,
- * ensuring that only the authenticated user can manage their own data. Air quality sensors
- * and disaster alerts are considered public and are readable by anyone.
+ * This ruleset enforces a strict user-ownership model for user profiles and issue reports.
+ * Air quality sensors and disaster alerts are publicly readable but not writable by regular users.
  *
  * Data Structure:
- * - User profiles are stored under `/users/{userId}/userProfile/{userProfileId}`, where `userId`
- *   is the unique identifier of the user and `userProfileId` must match `userId`.
- * - Issue reports are stored under `/users/{userId}/issueReports/{issueReportId}`, where `userId`
- *   is the unique identifier of the user who created the report.
- * - Air quality sensor data is stored under `/airQualitySensors/{airQualitySensorId}` and is publicly readable.
- * - Disaster alerts are stored under `/disasterAlerts/{disasterAlertId}` and are publicly readable.
+ * - User profiles are stored under /users/{userId}/userProfile/{userProfileId}, where userProfileId must equal userId.
+ * - Issue reports are stored under /users/{userId}/issueReports/{issueReportId}, associating them with a specific user.
+ * - Air quality sensor data is stored under /airQualitySensors/{airQualitySensorId}.
+ * - Disaster alerts are stored under /disasterAlerts/{disasterAlertId}.
  *
  * Key Security Decisions:
- * - User data is strictly controlled by the user's authentication status and UID.
- * - Listing of all users is disallowed, as is cross-user data access.
- * - Air quality sensor and disaster alert data is publicly accessible for read operations.
- * - The rules explicitly deny any write operations that are not explicitly allowed.
+ * - User listing is disallowed.
+ * - Read-only collections (airQualitySensors, disasterAlerts) are publicly readable.
+ * - Data validation is minimal during the prototyping phase, focusing on authorization.
  *
  * Denormalization for Authorization:
- * - The `userProfileId` and `userId` fields are denormalized on the UserProfile document to ensure
- *   that the path parameters match the document's internal fields.
+ * - UserProfile and IssueReport entities both include a `userProfileId` to simplify ownership checks and ensure
+ *   Authorization Independence.
+ *
+ * Structural Segregation:
+ * - Private user data (profiles, reports) is stored under the /users/{userId} collection, separate from
+ *   publicly readable data (airQualitySensors, disasterAlerts).
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for user profile data.
+     * @description Enforces owner-only access to user profile data.
      * @path /users/{userId}/userProfile/{userProfileId}
-     * @allow (create) - User with UID 'user123' can create a profile at /users/user123/userProfile/user123.
-     * @allow (update) - User with UID 'user123' can update their profile at /users/user123/userProfile/user123.
-     * @allow (delete) - User with UID 'user123' can delete their profile at /users/user123/userProfile/user123.
-     * @allow (get) - User with UID 'user123' can read their profile at /users/user123/userProfile/user123.
-     * @allow (list) - User with UID 'user123' can list their own profiles (though there will only be one)
-     * @deny (create) - User with UID 'user456' cannot create a profile at /users/user123/userProfile/user123.
-     * @deny (update) - User with UID 'user456' cannot update the profile at /users/user123/userProfile/user123.
-     * @deny (delete) - User with UID 'user456' cannot delete the profile at /users/user123/userProfile/user123.
-     * @deny (get) - User with UID 'user456' cannot read the profile at /users/user123/userProfile/user123.
-     * @principle Enforces document ownership for all write operations and get operations.
+     * @allow (create) - User 'abc' can create their own profile at /users/abc/userProfile/abc.
+     * @allow (get, update, delete) - User 'abc' can read, update, or delete their profile at /users/abc/userProfile/abc.
+     * @deny (create, get, update, delete) - User 'def' cannot access user 'abc' profile at /users/abc/userProfile/abc.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/userProfile/{userProfileId} {
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return request.auth != null && request.auth.uid == userId;
       }
+
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
+
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+      allow list: if false; // User profiles are not listable.
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Enforces user-ownership for issue reports.
+     * @description Enforces owner-only access to issue reports created by a user.
      * @path /users/{userId}/issueReports/{issueReportId}
-     * @allow (create) - User with UID 'user123' can create a report at /users/user123/issueReports/report1.
-     * @allow (update) - User with UID 'user123' can update their report at /users/user123/issueReports/report1.
-     * @allow (delete) - User with UID 'user123' can delete their report at /users/user123/issueReports/report1.
-     * @allow (get) - User with UID 'user123' can read their report at /users/user123/issueReports/report1.
-     * @allow (list) - User with UID 'user123' can list their own reports.
-     * @deny (create) - User with UID 'user456' cannot create a report at /users/user123/issueReports/report1.
-     * @deny (update) - User with UID 'user456' cannot update the report at /users/user123/issueReports/report1.
-     * @deny (delete) - User with UID 'user456' cannot delete the report at /users/user123/issueReports/report1.
-     * @deny (get) - User with UID 'user456' cannot read the report at /users/user123/issueReports/report1.
-     * @principle Enforces document ownership for all write operations and get operations.
+     * @allow (create) - User 'abc' can create an issue report under /users/abc/issueReports/{issueReportId}.
+     * @allow (get, update, delete) - User 'abc' can read, update, or delete their issue report under /users/abc/issueReports/{issueReportId}.
+     * @deny (create, get, update, delete) - User 'def' cannot access user 'abc' issue reports under /users/abc/issueReports/{issueReportId}.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId}/issueReports/{issueReportId} {
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return request.auth != null && request.auth.uid == userId;
       }
+
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Allows public read access to air quality sensor data.
+     * @description Allows public read access to air quality sensor data, but restricts writes.
      * @path /airQualitySensors/{airQualitySensorId}
-     * @allow (get) - Any user can read air quality sensor data.
-     * @allow (list) - Any user can list air quality sensor data.
-     * @deny (create) - No one can create air quality sensor data through the client.
-     * @deny (update) - No one can update air quality sensor data through the client.
-     * @deny (delete) - No one can delete air quality sensor data through the client.
-     * @principle Allows public read access, but restricts write access to backend.
+     * @allow (get, list) - Any user can read air quality sensor data.
+     * @deny (create, update, delete) - No user can create, update, or delete air quality sensor data.
+     * @principle Provides public read access while restricting write access.
      */
     match /airQualitySensors/{airQualitySensorId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Allows public read access to disaster alert data.
+     * @description Allows public read access to disaster alerts, but restricts writes.
      * @path /disasterAlerts/{disasterAlertId}
-     * @allow (get) - Any user can read disaster alert data.
-     * @allow (list) - Any user can list disaster alert data.
-     * @deny (create) - No one can create disaster alert data through the client.
-     * @deny (update) - No one can update disaster alert data through the client.
-     * @deny (delete) - No one can delete disaster alert data through the client.
-     * @principle Allows public read access, but restricts write access to backend.
+     * @allow (get, list) - Any user can read disaster alerts.
+     * @deny (create, update, delete) - No user can create, update, or delete disaster alerts.
+     * @principle Provides public read access while restricting write access.
      */
     match /disasterAlerts/{disasterAlertId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
   }
 }

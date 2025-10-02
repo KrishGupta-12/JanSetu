@@ -3,12 +3,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Report, ReportStatus, AdminRole } from '@/lib/types';
+import { Report, ReportStatus, AdminRole, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Star } from 'lucide-react';
-import { mockReports, mockAdmins } from '@/lib/data';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { differenceInDays } from 'date-fns';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: 'hsl(var(--chart-1))',
@@ -21,31 +22,31 @@ const statusColors: {[key in ReportStatus]: string} = {
 
 
 export default function MyDepartmentPage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
+  const firestore = useFirestore();
 
-  const adminData = useMemo(() => {
-    if (!user) return null;
-    return mockAdmins.find(admin => admin.email === user.email);
-  }, [user]);
+  const reportsQuery = useMemoFirebase(() => {
+    if (!adminData || !adminData.uid) return null;
+     if (adminData.role === AdminRole.SuperAdmin) return null;
+    return query(collection(firestore, 'issueReports'), where('assignedAdminId', '==', adminData.uid));
+  }, [adminData, firestore]);
 
-  const reports = useMemo(() => {
-    if (!adminData) return [];
-    if (adminData.role === AdminRole.SuperAdmin) {
-      // Super admin shouldn't see this page, but as a fallback show all.
-      return mockReports; 
-    } else {
-      return mockReports.filter(report => report.assignedAdminId === adminData.id);
-    }
-  }, [adminData]);
+  const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
   useEffect(() => {
-    if (!isUserLoading && (!user || !adminData || adminData.role === AdminRole.SuperAdmin)) {
+    if (!isUserLoading && (!adminData || !adminData.role || adminData.role === AdminRole.SuperAdmin)) {
       router.push('/admin'); 
     }
-  }, [user, adminData, isUserLoading, router]);
+  }, [adminData, isUserLoading, router]);
 
   const departmentStats = useMemo(() => {
+    if (!reports) {
+       return {
+            total: 0, pending: 0, inProgress: 0, resolved: 0,
+            avgResolutionTime: 0, avgCitizenRating: 0, totalCost: 0
+        };
+    }
     const resolvedReports = reports.filter(r => r.status === ReportStatus.Resolved && r.resolution);
     if (reports.length === 0) {
         return {
@@ -74,6 +75,7 @@ export default function MyDepartmentPage() {
   }, [reports]);
 
   const reportsByStatus = useMemo(() => {
+        if (!reports) return [];
         const counts = Object.values(ReportStatus).reduce((acc, status) => {
             acc[status] = 0;
             return acc;
@@ -88,9 +90,9 @@ export default function MyDepartmentPage() {
     }, [reports]);
 
 
-  const isLoading = isUserLoading;
+  const isLoading = isUserLoading || reportsLoading;
 
-  if (isLoading || !user || !adminData) {
+  if (isLoading || !adminData) {
      return (
        <div className="space-y-6">
          <Skeleton className="h-10 w-1/2" />

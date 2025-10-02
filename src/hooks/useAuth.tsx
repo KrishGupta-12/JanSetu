@@ -7,6 +7,7 @@ import { useFirebase, useFirestore, useAuth as useFirebaseAuth } from '@/firebas
 import { UserProfile, AdminRole } from '@/lib/types';
 import { generateJanId } from '@/lib/utils';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { mockAdmins } from '@/lib/data'; // Keep for admin role simulation
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -25,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { auth, firestore, isUserLoading } = useFirebase();
+  const { auth, firestore, isUserLoading: isFirebaseLoading } = useFirebase();
 
   useEffect(() => {
     if (!auth) return;
@@ -33,14 +34,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = auth.onAuthStateChanged(async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        // Fetch user profile from Firestore
         const userDocRef = doc(firestore, 'users', fbUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser(userDoc.data() as UserProfile);
         } else {
-            // This case might happen if a user is created in Auth but not in Firestore
-            setUser(null); 
+            // Check if it's a mock admin logging in for the first time
+            const mockAdmin = mockAdmins.find(admin => admin.email === fbUser.email);
+            if (mockAdmin) {
+                const newAdminProfile: UserProfile = {
+                    ...mockAdmin,
+                    uid: fbUser.uid,
+                    dateJoined: new Date().toISOString(),
+                };
+                await setDoc(userDocRef, newAdminProfile);
+                setUser(newAdminProfile);
+            } else {
+                 setUser(null); 
+            }
         }
       } else {
         setUser(null);
@@ -56,6 +67,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await signInWithEmailAndPassword(auth, email, password);
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
+      // Try to sign up if it's a new mock admin
+      const mockAdmin = mockAdmins.find(admin => admin.email === email);
+      if (mockAdmin && error.code === 'auth/user-not-found') {
+          try {
+              const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+              const { uid } = userCredential.user;
+              const newAdminProfile: UserProfile = { ...mockAdmin, uid, dateJoined: new Date().toISOString() };
+              await setDoc(doc(firestore, 'users', uid), newAdminProfile);
+              setUser(newAdminProfile);
+              return { success: true, message: 'Admin account created and logged in.' };
+          } catch (signupError: any) {
+              return { success: false, message: signupError.message };
+          }
+      }
       return { success: false, message: error.message || 'Invalid email or password.' };
     }
   };
@@ -99,7 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isLoading: isLoading || isUserLoading, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, firebaseUser, isLoading: isLoading || isFirebaseLoading, login, signup, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

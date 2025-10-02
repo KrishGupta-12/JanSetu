@@ -1,14 +1,16 @@
-'use client'
+'use client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Report, AdminRole } from '@/lib/types';
+import { UserProfile, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { mockReports, mockAdmins } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+
 
 // Mock data for team members, in a real app this would come from a database
 const mockTeam = [
@@ -53,22 +55,17 @@ function TeamTableSkeleton() {
 }
 
 export default function MyTeamPage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
 
-  const adminData = useMemo(() => {
-    if (!user) return null;
-    return mockAdmins.find(admin => admin.email === user.email);
-  }, [user]);
-
   useEffect(() => {
-    if (!isUserLoading && (!user || !adminData || adminData.role === AdminRole.SuperAdmin)) {
+    if (!isUserLoading && (!adminData || adminData.role === AdminRole.SuperAdmin)) {
       router.push('/admin'); 
     }
-  }, [user, adminData, isUserLoading, router]);
+  }, [adminData, isUserLoading, router]);
 
 
-  if (isUserLoading || !user || !adminData) {
+  if (isUserLoading || !adminData) {
      return <TeamTableSkeleton />;
   }
 

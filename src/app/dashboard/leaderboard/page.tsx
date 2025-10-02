@@ -3,13 +3,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockCitizens, mockReports } from '@/lib/data';
-import { Citizen, Report, ReportStatus } from '@/lib/types';
+import { UserProfile, Report, ReportStatus } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 type LeaderboardEntry = {
-  citizen: Citizen;
+  citizen: UserProfile;
   score: number;
   totalReports: number;
   resolvedReports: number;
@@ -60,10 +61,19 @@ function LeaderboardSkeleton() {
 
 
 export default function LeaderboardPage() {
-    const [isLoading, setIsLoading] = useState(true);
+    const firestore = useFirestore();
+
+    const citizensQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', null)), [firestore]);
+    const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
+    
+    const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
+    const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+
     const leaderboardData = useMemo(() => {
-        const data = mockCitizens.map(citizen => {
-            const userReports = mockReports.filter(r => r.citizenId === citizen.id);
+        if (!citizens || !reports) return [];
+
+        const data = citizens.map(citizen => {
+            const userReports = reports.filter(r => r.citizenId === citizen.uid);
             const resolvedReports = userReports.filter(r => r.status === ReportStatus.Resolved).length;
             const score = resolvedReports * 5 + userReports.length;
             return {
@@ -75,12 +85,9 @@ export default function LeaderboardPage() {
         });
 
         return data.sort((a, b) => b.score - a.score);
-    }, []);
+    }, [citizens, reports]);
 
-     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 500);
-        return () => clearTimeout(timer);
-    }, []);
+    const isLoading = citizensLoading || reportsLoading;
 
     if (isLoading) {
         return <LeaderboardSkeleton />;
@@ -115,7 +122,7 @@ export default function LeaderboardPage() {
                                 {leaderboardData.map((entry, index) => {
                                     const { icon, color, level } = getContributionLevel(entry.score);
                                     return (
-                                        <TableRow key={entry.citizen.id} className={index < 3 ? 'bg-secondary' : ''}>
+                                        <TableRow key={entry.citizen.uid} className={index < 3 ? 'bg-secondary' : ''}>
                                             <TableCell className="font-bold text-lg">{index + 1}</TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">

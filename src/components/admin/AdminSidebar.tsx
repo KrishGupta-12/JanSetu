@@ -16,8 +16,7 @@ import {
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useMemo } from 'react';
-import { mockAdmins } from '@/lib/data';
-import { AdminRole } from '@/lib/types';
+import { AdminRole, UserProfile } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
 const allMenuItems = [
@@ -41,17 +40,12 @@ function SidebarSkeleton() {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { user, isLoading, logout } = useAuth();
+  const { user: adminData, isLoading, logout } = useAuth();
   const router = useRouter();
 
-  const adminData = useMemo(() => {
-    if (!user) return null;
-    return mockAdmins.find(admin => admin.email === user.email);
-  }, [user]);
-
   const menuItems = useMemo(() => {
-      if (!adminData) return [];
-      return allMenuItems.filter(item => item.roles.includes(adminData.role));
+      if (!adminData || !adminData.role) return [];
+      return allMenuItems.filter(item => item.roles.includes(adminData.role!));
   }, [adminData]);
 
   const handleSignOut = () => {

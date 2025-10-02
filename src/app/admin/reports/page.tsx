@@ -5,34 +5,31 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Report, ReportStatus, AdminRole } from '@/lib/types';
-import { mockReports, mockAdmins } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+
 
 export default function AdminReportsPage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-
-  const adminData = useMemo(() => {
-    if (!user) return null;
-    return mockAdmins.find(admin => admin.email === user.email);
-  }, [user]);
+  const firestore = useFirestore();
 
    useEffect(() => {
-    if (!isUserLoading && (!user || !adminData || adminData.role !== AdminRole.SuperAdmin)) {
+    if (!isUserLoading && (!adminData || adminData.role !== AdminRole.SuperAdmin)) {
       router.push('/admin'); 
     }
-  }, [user, adminData, isUserLoading, router]);
+  }, [adminData, isUserLoading, router]);
 
-  const reports = useMemo(() => {
-    if (!adminData) return [];
-    if (adminData.role === AdminRole.SuperAdmin) {
-      return mockReports;
-    }
-    return [];
-  }, [adminData]);
+  const reportsQuery = useMemoFirebase(() => {
+    if (!adminData || adminData.role !== AdminRole.SuperAdmin) return null;
+    return query(collection(firestore, 'issueReports'));
+  }, [adminData, firestore]);
+
+  const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
   
-  const isLoading = isUserLoading;
+  const isLoading = isUserLoading || areReportsLoading;
 
-  if (isLoading || !user || !adminData) {
+  if (isLoading || !adminData) {
      return (
        <div className="space-y-6">
          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -54,7 +51,7 @@ export default function AdminReportsPage() {
             Manage all citizen reports and assign them to departments.
         </p>
       </div>
-      <ReportTable reports={reports.sort((a,b) => b.upvotes - a.upvotes) || []} admin={adminData} />
+      <ReportTable reports={reports?.sort((a,b) => b.upvotes - a.upvotes) || []} admin={adminData} />
     </div>
   );
 }

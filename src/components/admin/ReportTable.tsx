@@ -42,16 +42,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MoreHorizontal, Loader2, Sparkles, Eye, UserCheck, ShieldX, Check, Star, Siren, Triangle, Square, Circle as LucideCircle, ThumbsUp } from 'lucide-react';
-import type { Report, Admin, Resolution, ReportUrgency, ReportCategory } from '@/lib/types';
+import type { Report, UserProfile, Resolution, ReportUrgency, ReportCategory } from '@/lib/types';
 import { ReportStatus, AdminRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { mockAdmins, reportCategories } from '@/lib/data';
+import { reportCategories } from '@/lib/data';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -92,8 +96,7 @@ const StarRating = ({ rating, setRating, disabled }: { rating: number, setRating
     </div>
 )
 
-export default function ReportTable({ reports: initialReports, admin }: { reports: Report[], admin: Admin }) {
-  const [reports, setReports] = useState(initialReports);
+export default function ReportTable({ reports, admin }: { reports: Report[], admin: UserProfile }) {
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
@@ -104,8 +107,11 @@ export default function ReportTable({ reports: initialReports, admin }: { report
   const [categoryFilter, setCategoryFilter] = useState<ReportCategory | 'all'>('all');
 
   const { toast } = useToast();
+  const firestore = useFirestore();
 
-  const allAdmins = mockAdmins;
+  const adminsQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const { data: allAdmins } = useCollection<UserProfile>(adminsQuery);
+
 
   const filteredReports = useMemo(() => {
     let filtered = reports;
@@ -119,7 +125,9 @@ export default function ReportTable({ reports: initialReports, admin }: { report
   }, [reports, urgencyFilter, categoryFilter]);
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
-    setReports(prevReports => prevReports.map(r => r.id === reportId ? {...r, status} : r));
+    const reportDocRef = doc(firestore, 'issueReports', reportId);
+    updateDocumentNonBlocking(reportDocRef, { status });
+
     toast({
       title: 'Status Updated',
       description: `Report status changed to ${status}.`
@@ -127,24 +135,25 @@ export default function ReportTable({ reports: initialReports, admin }: { report
   }
   
   const handleUpdateUrgency = (reportId: string, urgency: ReportUrgency) => {
-    setReports(prevReports => prevReports.map(r => r.id === reportId ? {...r, urgency} : r));
+    const reportDocRef = doc(firestore, 'issueReports', reportId);
+    updateDocumentNonBlocking(reportDocRef, { urgency });
     toast({
       title: 'Urgency Updated',
       description: `Report urgency changed to ${urgency}.`
     });
   }
 
-  const handleAssignAdmin = (reportId: string, admin: Admin) => {
-     setReports(prevReports => prevReports.map(r => r.id === reportId ? {
-        ...r, 
-        assignedAdminId: admin.id,
-        assignedAdminName: admin.name,
+  const handleAssignAdmin = (reportId: string, assignedAdmin: UserProfile) => {
+    const reportDocRef = doc(firestore, 'issueReports', reportId);
+     updateDocumentNonBlocking(reportDocRef, {
+        assignedAdminId: assignedAdmin.uid,
+        assignedAdminName: assignedAdmin.name,
         status: ReportStatus.InProgress, 
-      } : r));
+      });
 
      toast({
       title: 'Report Assigned',
-      description: `Report has been assigned to ${admin.name}.`
+      description: `Report has been assigned to ${assignedAdmin.name}.`
     });
   }
 
@@ -176,31 +185,27 @@ export default function ReportTable({ reports: initialReports, admin }: { report
   }
   
   const handleSaveResolution = (reportId: string, resolutionData: Omit<Resolution, 'adminId' | 'adminName' | 'date'>) => {
-    setReports(prevReports => prevReports.map(r => r.id === reportId ? {
-      ...r,
+    const reportDocRef = doc(firestore, 'issueReports', reportId);
+    const updateData = {
       status: ReportStatus.PendingCitizenFeedback,
       resolution: {
         ...resolutionData,
-        adminId: admin.id,
+        adminId: admin.uid,
         adminName: admin.name,
         date: new Date().toISOString(),
       }
-    } : r));
+    };
+    updateDocumentNonBlocking(reportDocRef, updateData);
     setIsResolutionFormOpen(false);
     toast({ title: "Resolution Submitted", description: "Waiting for citizen feedback."});
   }
 
   const handleApproveWork = (reportId: string) => {
-     setReports(prevReports => prevReports.map(r => {
-      if (r.id === reportId && r.resolution) {
-        return {
-          ...r,
-          status: ReportStatus.Resolved,
-          resolution: { ...r.resolution, isApproved: true }
-        }
-      }
-      return r;
-     }));
+    const reportDocRef = doc(firestore, 'issueReports', reportId);
+     updateDocumentNonBlocking(reportDocRef, { 
+       status: ReportStatus.Resolved,
+       'resolution.isApproved': true 
+      });
      toast({ title: "Work Approved", description: "This report is now marked as resolved."});
      setIsDetailViewOpen(false);
   }
@@ -298,7 +303,7 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(report.reportDate).toLocaleDateString()}
+                      {report.reportDate ? new Date(report.reportDate).toLocaleDateString() : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -324,7 +329,7 @@ export default function ReportTable({ reports: initialReports, admin }: { report
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent>
                                 {allAdmins?.filter(a => a.role === AdminRole.DepartmentAdmin).map(deptAdmin => (
-                                  <DropdownMenuItem key={deptAdmin.id} onClick={() => handleAssignAdmin(report.id, deptAdmin)}>
+                                  <DropdownMenuItem key={deptAdmin.uid} onClick={() => handleAssignAdmin(report.id, deptAdmin)}>
                                     {deptAdmin.name} ({deptAdmin.department})
                                   </DropdownMenuItem>
                                 ))}
@@ -508,7 +513,7 @@ export default function ReportTable({ reports: initialReports, admin }: { report
 }
 
 
-function ResolutionForm({ report, admin, onClose, onSave }: { report: Report | null, admin: Admin, onClose: () => void, onSave: (reportId: string, data: any) => void }) {
+function ResolutionForm({ report, admin, onClose, onSave }: { report: Report | null, admin: UserProfile, onClose: () => void, onSave: (reportId: string, data: any) => void }) {
     const [summary, setSummary] = useState('');
     const [cost, setCost] = useState(0);
     const [costBreakdown, setCostBreakdown] = useState('');

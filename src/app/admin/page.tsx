@@ -6,37 +6,36 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Report, ReportStatus, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText, Siren } from 'lucide-react';
-import { mockReports, mockAdmins } from '@/lib/data';
 import ReportTable from '@/components/admin/ReportTable';
 import MapView from '@/components/home/MapView';
 import { MapProvider } from '@/components/home/MapProvider';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function AdminDashboardPage() {
-  const { user, isLoading: isUserLoading } = useAuth();
+  const { user: adminData, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-
-  const adminData = useMemo(() => {
-    if (!user) return null;
-    return mockAdmins.find(admin => admin.email === user.email);
-  }, [user]);
+  const firestore = useFirestore();
   
   useEffect(() => {
-    if (!isUserLoading && (!user || !adminData)) {
+    if (!isUserLoading && (!adminData || !adminData.role)) {
       router.push('/dashboard'); 
     }
-  }, [user, adminData, isUserLoading, router]);
+  }, [adminData, isUserLoading, router]);
 
-  const reports = useMemo(() => {
-    if (!adminData) return [];
+  const reportsQuery = useMemoFirebase(() => {
+    if (!adminData) return null;
     if (adminData.role === AdminRole.SuperAdmin) {
-      return mockReports;
+      return query(collection(firestore, 'issueReports'));
     } else {
-      return mockReports.filter(report => report.assignedAdminId === adminData.id);
+      return query(collection(firestore, 'issueReports'), where('assignedAdminId', '==', adminData.uid));
     }
-  }, [adminData]);
-  
+  }, [adminData, firestore]);
+
+  const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
+
   const reportStats = useMemo(() => {
     if (!reports) {
       return { total: 0, pending: 0, inProgress: 0, resolved: 0, critical: 0 };
@@ -50,10 +49,9 @@ export default function AdminDashboardPage() {
     };
   }, [reports]);
 
+  const isLoading = isUserLoading || areReportsLoading;
 
-  const isLoading = isUserLoading;
-
-  if (isLoading || !user || !adminData) {
+  if (isLoading || !adminData) {
      return (
        <div className="space-y-6">
          <Skeleton className="h-10 w-1/2" />
@@ -183,7 +181,7 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent className="h-[500px] p-0">
              <MapProvider>
-                <MapView reports={reports} />
+                <MapView reports={reports || []} />
              </MapProvider>
         </CardContent>
       </Card>
@@ -197,7 +195,7 @@ export default function AdminDashboardPage() {
             </Button>
         </CardHeader>
         <CardContent>
-          <ReportTable reports={reports.slice(0, 5) || []} admin={adminData} />
+          <ReportTable reports={reports?.slice(0, 5) || []} admin={adminData} />
         </CardContent>
       </Card>
     </div>
