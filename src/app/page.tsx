@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,6 +68,10 @@ export default function LandingPage() {
           <h1 className="text-4xl md:text-6xl font-headline font-bold mb-4">
             Building Better Communities, Together
           </h1>
+          <div className="mb-8">
+            <p className="text-2xl font-semibold text-slate-100">जनसेवा हि धर्मः</p>
+            <p className="text-sm text-slate-300 italic">(&quot;Service to the people is the highest duty&quot;)</p>
+          </div>
           <p className="text-lg md:text-xl text-slate-200 mb-8">
             JanSetu is a platform for civic engagement. Report issues, monitor your environment, and contribute to a smarter, cleaner, and safer city.
           </p>
