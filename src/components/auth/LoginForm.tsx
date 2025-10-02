@@ -7,8 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Loader2, User, UserCog, Shield } from 'lucide-react';
-import { mockAdmins } from '@/lib/data';
-import { AdminRole } from '@/lib/types';
+import { AdminRole, UserProfile } from '@/lib/types';
 
 type DemoUser = {
   email: string;
@@ -29,7 +28,7 @@ const demoUsers: DemoUser[] = [
 
 export function LoginForm() {
   const [loadingUser, setLoadingUser] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -41,19 +40,12 @@ export function LoginForm() {
     const result = await login(email, password);
 
     if (result.success) {
-      const isAdmin = mockAdmins.find(u => u.email === email);
-      
       toast({
         title: 'Success',
         description: 'Logged in successfully!',
       });
-      
-      if (isAdmin) {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
-
+      // The useAuth hook will update the user state,
+      // and a separate useEffect can handle routing based on role.
     } else {
       toast({
         variant: 'destructive',
@@ -63,6 +55,18 @@ export function LoginForm() {
     }
     setLoadingUser(null);
   };
+  
+    // This effect will run when the user state changes after a successful login.
+    React.useEffect(() => {
+        if (user) {
+            if (user.role) {
+                router.push('/admin');
+            } else {
+                router.push('/dashboard');
+            }
+        }
+    }, [user, router]);
+
 
   return (
     <div className="space-y-4">

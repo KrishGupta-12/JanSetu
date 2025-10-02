@@ -1,12 +1,12 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { useFirebase, useFirestore } from '@/firebase';
-import { UserProfile } from '@/lib/types';
+import { useFirebase } from '@/firebase';
+import { UserProfile, AdminCredential } from '@/lib/types';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { mockAdmins } from '@/lib/data'; 
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -33,23 +33,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = auth.onAuthStateChanged(async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
+        setIsLoading(true);
         const userDocRef = doc(firestore, 'users', fbUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser(userDoc.data() as UserProfile);
-        } else {
-            const mockAdmin = mockAdmins.find(admin => admin.email === fbUser.email);
-            if (mockAdmin) {
-                const newAdminProfile: UserProfile = {
-                    ...mockAdmin,
-                    uid: fbUser.uid,
-                    dateJoined: new Date().toISOString(),
-                };
-                setDocumentNonBlocking(userDocRef, newAdminProfile, { merge: false });
-                setUser(newAdminProfile);
-            } else {
-                 setUser(null); 
-            }
         }
       } else {
         setUser(null);
@@ -60,25 +48,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [auth, firestore]);
 
+  const createUserProfile = async (
+    fbUser: FirebaseUser,
+    additionalData: Partial<UserProfile> = {}
+  ): Promise<UserProfile> => {
+    const { uid, email, displayName } = fbUser;
+    
+    // Check if the user is a designated admin
+    const adminRef = doc(firestore, 'admins', email!);
+    const adminDoc = await getDoc(adminRef);
+
+    let roleData: Partial<UserProfile> = { role: null };
+    if (adminDoc.exists()) {
+        const adminInfo = adminDoc.data() as AdminCredential;
+        roleData = {
+            role: adminInfo.role,
+            department: adminInfo.department,
+        };
+    }
+
+    const newUserProfile: UserProfile = {
+        uid,
+        name: additionalData.name || displayName || email || 'Anonymous',
+        email: email!,
+        dateJoined: new Date().toISOString(),
+        ...roleData,
+        ...additionalData,
+    };
+    
+    const userDocRef = doc(firestore, 'users', uid);
+    await setDoc(userDocRef, newUserProfile, { merge: true });
+    setUser(newUserProfile);
+    return newUserProfile;
+  };
+
+
   const login = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Let the onAuthStateChanged listener handle profile fetching.
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
-      const mockAdmin = mockAdmins.find(admin => admin.email === email);
-      if (mockAdmin && error.code === 'auth/user-not-found') {
-          try {
-              const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-              const { uid } = userCredential.user;
-              const newAdminProfile: UserProfile = { ...mockAdmin, uid, dateJoined: new Date().toISOString() };
-              const userDocRef = doc(firestore, 'users', uid);
-              setDocumentNonBlocking(userDocRef, newAdminProfile, { merge: false });
-              setUser(newAdminProfile);
-              return { success: true, message: 'Admin account created and logged in.' };
-          } catch (signupError: any) {
-              return { success: false, message: signupError.message };
-          }
-      }
       return { success: false, message: error.message || 'Invalid email or password.' };
     }
   };
@@ -86,23 +96,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (name: string, email: string, password: string) => {
      try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const { uid } = userCredential.user;
-
-        const newUserProfile: UserProfile = {
-            uid,
-            name,
-            email,
-            phone: '',
-            dateJoined: new Date().toISOString(),
-        };
-        
-        const userDocRef = doc(firestore, 'users', uid);
-        await setDoc(userDocRef, newUserProfile, { merge: false });
-        
-        setUser(newUserProfile);
-
+        await createUserProfile(userCredential.user, { name });
         return { success: true, message: "Signup successful" };
-
      } catch(error: any) {
         return { success: false, message: error.message || "Email already in use." };
      }

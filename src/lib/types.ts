@@ -1,3 +1,4 @@
+
 export enum ReportCategory {
   Waste = 'Waste Management',
   Pothole = 'Potholes',
@@ -62,7 +63,6 @@ export type AqiSensor = {
 
 export type UserProfile = {
   uid: string;
-  janId?: string;
   name: string;
   email: string;
   phone?: string;
@@ -72,7 +72,7 @@ export type UserProfile = {
   city?: string;
   state?: string;
   bannedUntil?: string | 'lifetime' | null; 
-  role?: AdminRole | null;
+  role: AdminRole | null;
   department?: ReportCategory;
 };
 
@@ -81,6 +81,12 @@ export enum AdminRole {
     SuperAdmin = 'super_admin',
     DepartmentAdmin = 'department_admin'
 }
+
+export type AdminCredential = {
+    role: AdminRole;
+    department?: ReportCategory;
+}
+
 
 export type Admin = UserProfile & {
     role: AdminRole;
