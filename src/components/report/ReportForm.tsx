@@ -19,34 +19,23 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { MapPin, Image as ImageIcon, Loader2, CheckCircle, AlertCircle, Ban } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { submitReport, type FormState } from '@/lib/actions';
-import { ReportCategory } from '@/lib/types';
-import { reportCategories } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 const reportFormSchema = z.object({
-  category: z.nativeEnum(ReportCategory, {
-    required_error: 'Please select a category.',
-  }),
   description: z.string().min(10, {
     message: 'Description must be at least 10 characters.',
   }),
   latitude: z.string().min(1, { message: 'Location is required.' }),
   longitude: z.string().min(1, { message: 'Location is required.' }),
   photo: z.string().optional(),
+  citizenId: z.string().min(1, { message: 'Citizen ID is missing.' }),
 });
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
@@ -92,8 +81,15 @@ export default function ReportForm() {
       description: '',
       latitude: '',
       longitude: '',
+      citizenId: user?.uid || '',
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      form.setValue('citizenId', user.uid);
+    }
+  }, [user, form]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -176,32 +172,8 @@ export default function ReportForm() {
     <>
       <Form {...form}>
         <form ref={formRef} action={dispatch} className="space-y-8">
-           {user && <input type="hidden" name="citizenId" value={user.uid} />}
-          <FormField
-            control={form.control}
-            name="category"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a report category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {reportCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
+           <input type="hidden" {...form.register('citizenId')} />
+          
           <FormField
             control={form.control}
             name="description"
@@ -209,8 +181,11 @@ export default function ReportForm() {
               <FormItem>
                 <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Tell us more about the issue..." {...field} />
+                  <Textarea placeholder="Tell us more about the issue... The more details you provide, the better our AI can classify it." {...field} />
                 </FormControl>
+                <FormDescription>
+                  Our AI will automatically determine the category and urgency based on your description.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

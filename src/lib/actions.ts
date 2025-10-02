@@ -8,10 +8,8 @@ import { ReportCategory } from './types';
 import { initializeFirebase } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { Report } from './types';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const reportSchema = z.object({
-  category: z.nativeEnum(ReportCategory),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
   latitude: z.string(),
   longitude: z.string(),
@@ -29,7 +27,6 @@ export async function submitReport(
   formData: FormData
 ): Promise<FormState> {
   const validatedFields = reportSchema.safeParse({
-    category: formData.get('category'),
     description: formData.get('description'),
     latitude: formData.get('latitude'),
     longitude: formData.get('longitude'),
@@ -59,20 +56,21 @@ export async function submitReport(
     const classificationResult = await classifyReport({ description });
 
     const reportData = {
-        ...validatedFields.data,
-        imageUrl: moderatedPhotoDataUri || '',
-        category: classificationResult.category,
-        urgency: classificationResult.urgency,
-        reportDate: new Date().toISOString(),
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        status: 'Pending',
-        upvotes: 0,
-        citizenIdsWhoUpvoted: [],
+      citizenId,
+      description,
+      imageUrl: moderatedPhotoDataUri || '',
+      category: classificationResult.category,
+      urgency: classificationResult.urgency,
+      reportDate: new Date().toISOString(),
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      status: 'Pending',
+      upvotes: 0,
+      citizenIdsWhoUpvoted: [],
     };
 
     const reportsCollection = collection(firestore, 'issueReports');
-    addDocumentNonBlocking(reportsCollection, reportData);
+    await addDoc(reportsCollection, reportData);
 
     return {
       status: 'success',
