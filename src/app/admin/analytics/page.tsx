@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { useMemo } from 'react';
 import { differenceInDays, subDays } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: 'hsl(var(--chart-1))',
@@ -31,10 +31,8 @@ export default function AnalyticsPage() {
     const reportsQuery = useMemoFirebase(() => query(collection(firestore, 'issueReports')), [firestore]);
     const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
 
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
-    const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
-
-    const departmentAdmins = useMemo(() => (users || []).filter(u => u.role === AdminRole.DepartmentAdmin), [users]);
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', AdminRole.DepartmentAdmin)), [firestore]);
+    const { data: departmentAdmins, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const reportsByStatus = useMemo(() => {
         if (!reports) return [];

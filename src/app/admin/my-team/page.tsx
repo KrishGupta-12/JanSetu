@@ -3,22 +3,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { UserProfile, AdminRole } from '@/lib/types';
+import { UserProfile, AdminRole, Report, ReportStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-
-
-// Mock data for team members, in a real app this would come from a database
-const mockTeam = [
-    { id: 'team-001', name: 'Ramesh Kumar', role: 'Field Officer', reportsClosed: 32, avgRating: 4.5 },
-    { id: 'team-002', name: 'Sunita Devi', role: 'Field Officer', reportsClosed: 41, avgRating: 4.8 },
-    { id: 'team-003', name: 'Arjun Singh', role: 'Field Supervisor', reportsClosed: 15, avgRating: 4.2 },
-    { id: 'team-004', name: 'Meena Kumari', role: 'Junior Officer', reportsClosed: 25, avgRating: 4.6 },
-];
 
 function TeamTableSkeleton() {
     return (
@@ -57,6 +48,7 @@ function TeamTableSkeleton() {
 export default function MyTeamPage() {
   const { user: adminData, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
+  const firestore = useFirestore();
 
   useEffect(() => {
     if (!isUserLoading && (!adminData || adminData.role === AdminRole.SuperAdmin)) {
@@ -64,8 +56,36 @@ export default function MyTeamPage() {
     }
   }, [adminData, isUserLoading, router]);
 
+  const teamQuery = useMemoFirebase(() => {
+    if (!adminData || !adminData.department) return null;
+    return query(collection(firestore, 'users'), where('department', '==', adminData.department));
+  }, [adminData, firestore]);
 
-  if (isUserLoading || !adminData) {
+  const { data: teamMembers, isLoading: teamLoading } = useCollection<UserProfile>(teamQuery);
+
+  const reportsQuery = useMemoFirebase(() => {
+    if (!adminData || !adminData.department) return null;
+    return query(collection(firestore, 'issueReports'), where('category', '==', adminData.department));
+  }, [adminData, firestore]);
+  
+  const { data: reports, isLoading: reportsLoading } = useCollection<Report>(reportsQuery);
+
+  const teamPerformance = useMemo(() => {
+    if (!teamMembers || !reports) return [];
+    return teamMembers.map(member => {
+      const memberReports = reports.filter(r => r.assignedAdminId === member.uid);
+      const resolvedReports = memberReports.filter(r => r.status === ReportStatus.Resolved && r.resolution);
+      const totalRating = resolvedReports.reduce((acc, r) => acc + (r.resolution?.citizenRating || 0), 0);
+      const avgRating = resolvedReports.length > 0 ? totalRating / resolvedReports.length : 0;
+      return {
+        ...member,
+        reportsResolved: resolvedReports.length,
+        avgRating,
+      }
+    });
+  }, [teamMembers, reports]);
+
+  if (isUserLoading || teamLoading || reportsLoading || !adminData) {
      return <TeamTableSkeleton />;
   }
 
@@ -84,14 +104,14 @@ export default function MyTeamPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Member</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Reports Resolved</TableHead>
                   <TableHead className="text-right">Avg. Citizen Rating</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockTeam.map((member) => (
-                  <TableRow key={member.id}>
+                {teamPerformance.map((member) => (
+                  <TableRow key={member.uid}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
@@ -101,9 +121,9 @@ export default function MyTeamPage() {
                         <span className="font-medium">{member.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{member.role}</TableCell>
+                    <TableCell>{member.email}</TableCell>
                     <TableCell>
-                        <div className="font-medium">{member.reportsClosed}</div>
+                        <div className="font-medium">{member.reportsResolved}</div>
                     </TableCell>
                     <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

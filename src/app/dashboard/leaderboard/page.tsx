@@ -7,7 +7,7 @@ import { UserProfile, Report, ReportStatus } from '@/lib/types';
 import { Trophy, Shield, Star, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 type LeaderboardEntry = {
   citizen: UserProfile;
@@ -72,7 +72,7 @@ export default function LeaderboardPage() {
     const leaderboardData = useMemo(() => {
         if (!citizens || !reports) return [];
 
-        const data = citizens.map(citizen => {
+        const citizenScores = citizens.map(citizen => {
             const userReports = reports.filter(r => r.citizenId === citizen.uid);
             const resolvedReports = userReports.filter(r => r.status === ReportStatus.Resolved).length;
             const score = resolvedReports * 5 + userReports.length;
@@ -84,7 +84,7 @@ export default function LeaderboardPage() {
             };
         });
 
-        return data.sort((a, b) => b.score - a.score);
+        return citizenScores.sort((a, b) => b.score - a.score);
     }, [citizens, reports]);
 
     const isLoading = citizensLoading || reportsLoading;
