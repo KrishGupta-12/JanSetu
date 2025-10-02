@@ -60,7 +60,7 @@ export default function ProfilePage() {
     const resolved = reports.filter(r => r.status === ReportStatus.Resolved).length;
     const inProgress = reports.filter(r => r.status === ReportStatus.InProgress).length;
     const rejected = reports.filter(r => r.status === ReportStatus.Rejected).length;
-    const score = resolved * 5 + total;
+    const score = (resolved * 5) + total;
     
     return {
         total,
