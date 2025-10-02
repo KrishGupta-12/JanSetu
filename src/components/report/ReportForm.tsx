@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useFormStatus } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -68,7 +68,7 @@ function SubmitButton() {
 export default function ReportForm() {
   const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-  const [formState, dispatch] = useFormState(submitReport, initialState);
+  const [formState, dispatch] = useActionState(submitReport, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
