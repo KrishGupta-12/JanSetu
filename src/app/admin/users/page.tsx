@@ -1,7 +1,5 @@
 'use client';
 
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { Citizen } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -15,6 +13,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { mockCitizens } from '@/lib/data';
+import { useState, useEffect } from 'react';
 
 function UserTableSkeleton() {
     return (
@@ -49,13 +49,16 @@ function UserTableSkeleton() {
 
 
 export default function UsersPage() {
-  const firestore = useFirestore();
-  const citizensQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'citizens');
-  }, [firestore]);
+  const [citizens, setCitizens] = useState<Citizen[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: citizens, isLoading } = useCollection<Citizen>(citizensQuery);
+  useEffect(() => {
+    // Simulate fetching data
+    setTimeout(() => {
+        setCitizens(mockCitizens);
+        setIsLoading(false);
+    }, 1000)
+  }, []);
 
   if (isLoading) {
     return <UserTableSkeleton />;

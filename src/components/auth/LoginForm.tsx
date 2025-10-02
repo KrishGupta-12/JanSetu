@@ -16,12 +16,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { FirebaseError } from 'firebase/app';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { mockAdmins } from '@/lib/data';
+
 
 const formSchema = z.object({
   email: z.string().email({
@@ -34,8 +33,7 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const auth = useAuth();
-  const firestore = useFirestore();
+  const { login } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -49,55 +47,33 @@ export function LoginForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    if (!auth || !firestore) {
+    
+    const { email, password } = values;
+
+    // Simulate API call
+    setTimeout(() => {
+      const result = login(email, password);
+
+      if (result.success) {
+        const isAdmin = mockAdmins.some(admin => admin.email === email);
+        if (isAdmin) {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
         toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Firebase not initialized. Please try again later.'
-        });
-        setIsLoading(false);
-        return;
-    }
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      const loggedInUser = userCredential.user;
-
-      const adminRef = doc(firestore, 'admins', loggedInUser.uid);
-      const adminSnap = await getDoc(adminRef);
-
-      if (adminSnap.exists()) {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
-      
-      toast({
           title: 'Success',
           description: 'Logged in successfully!',
-      });
-
-    } catch (error) {
-      let errorMessage = 'An unexpected error occurred.';
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-          case 'auth/invalid-credential':
-            errorMessage = 'Invalid email or password. Please try again.';
-            break;
-          default:
-            errorMessage = 'Failed to log in. Please check your credentials.';
-            break;
-        }
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: result.message,
+        });
       }
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: errorMessage,
-      });
-    } finally {
-        setIsLoading(false);
-    }
+      setIsLoading(false);
+    }, 1000);
   };
 
   return (

@@ -3,10 +3,8 @@
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { summarizeReports } from '@/ai/flows/summarize-reports';
-import { ReportCategory, ReportStatus } from './types';
-import { getFirestore, collection, getDocs, serverTimestamp, addDoc, doc, setDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
-import { getAuth } from 'firebase/auth';
+import { ReportCategory } from './types';
+import { mockReports } from './data';
 
 const reportSchema = z.object({
   category: z.nativeEnum(ReportCategory),
@@ -14,7 +12,7 @@ const reportSchema = z.object({
   latitude: z.string(),
   longitude: z.string(),
   photo: z.string().optional(),
-  citizenId: z.string(),
+  citizenId: z.string().min(1, 'Citizen ID is missing.'),
 });
 
 export type FormState = {
@@ -26,23 +24,13 @@ export async function submitReport(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
-  const { firestore, auth } = initializeFirebase();
-  const currentUser = auth.currentUser;
-  
-  if (!currentUser) {
-     return {
-      status: 'error',
-      message: 'You must be logged in to submit a report.',
-    };
-  }
-
   const validatedFields = reportSchema.safeParse({
     category: formData.get('category'),
     description: formData.get('description'),
     latitude: formData.get('latitude'),
     longitude: formData.get('longitude'),
     photo: formData.get('photo'),
-    citizenId: currentUser.uid,
+    citizenId: formData.get('citizenId'),
   });
 
   if (!validatedFields.success) {
@@ -53,37 +41,21 @@ export async function submitReport(
     };
   }
 
-  const { category, description, latitude, longitude, photo, citizenId } = validatedFields.data;
+  const { photo } = validatedFields.data;
 
   try {
-    let moderatedPhotoUri: string | undefined = undefined;
-
     if (photo && photo.startsWith('data:image')) {
-      const moderationResult = await moderateImage({ photoDataUri: photo });
-      moderatedPhotoUri = moderationResult.moderatedPhotoDataUri;
+      // In a real app, we would use the moderated image.
+      // For now, we just call the flow to show it's connected.
+      await moderateImage({ photoDataUri: photo });
     }
 
-    const reportData = {
-        citizenId,
-        category,
-        description,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        imageUrl: moderatedPhotoUri || '',
-        reportDate: new Date().toISOString(),
-        status: ReportStatus.Pending,
-        updatedAt: serverTimestamp()
-    };
-    
-    const issueReportsCollection = collection(firestore, 'issue_reports');
-    const newReportRef = await addDoc(issueReportsCollection, { ...reportData });
+    // In a real app, this is where you'd save the report to the database.
+    // We'll just log it to the console and return success.
+    console.log('Mock Report Submitted:', validatedFields.data);
 
-    // Update the document with its own ID
-    await setDoc(doc(firestore, 'issue_reports', newReportRef.id), { id: newReportRef.id }, { merge: true });
-
-    const userIssueReportRef = doc(firestore, `users/${citizenId}/issue_reports`, newReportRef.id);
-    await setDoc(userIssueReportRef, { ...reportData, id: newReportRef.id });
-
+    // Simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     return {
       status: 'success',
@@ -99,24 +71,18 @@ export async function submitReport(
 }
 
 export async function summarizeAllReports(): Promise<{ summary: string } | { error: string }> {
-   const { firestore } = initializeFirebase();
   try {
-    const reportsCollection = collection(firestore, 'issue_reports');
-    const reportSnapshot = await getDocs(reportsCollection);
-
-    if (reportSnapshot.empty) {
+    if (mockReports.length === 0) {
       return { summary: "No reports to summarize at the moment." };
     }
 
-    const reportsForSummary = reportSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        category: data.category,
-        description: data.description,
-        location: `${data.latitude}, ${data.longitude}`,
-      }
-    });
+    const reportsForSummary = mockReports.map(doc => ({
+        category: doc.category,
+        description: doc.description,
+        location: `${doc.latitude}, ${doc.longitude}`,
+    }));
     
+    // The Genkit flow can still be called with mock data.
     const result = await summarizeReports({ reports: reportsForSummary });
     
     return { summary: result.summary };

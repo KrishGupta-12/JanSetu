@@ -8,10 +8,8 @@ import {
   CloudRain,
   HelpCircle,
 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { Report, ReportCategory, AqiSensor } from '@/lib/types';
-import { mockAqiSensors } from '@/lib/data';
+import { Report, ReportCategory } from '@/lib/types';
+import { mockAqiSensors, mockReports } from '@/lib/data';
 
 
 const ReportIcon = ({ category }: { category: ReportCategory }) => {
@@ -32,14 +30,8 @@ const ReportIcon = ({ category }: { category: ReportCategory }) => {
 
 const MapView = () => {
   const defaultCenter = { lat: 28.6139, lng: 77.209 };
-  const firestore = useFirestore();
+  const reports = mockReports;
 
-  const reportsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'issue_reports');
-  }, [firestore]);
-
-  const { data: reports } = useCollection<Report>(reportsQuery);
 
   return (
     <Map

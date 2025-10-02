@@ -1,9 +1,8 @@
 'use client';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Citizen } from '@/lib/types';
 import { Textarea } from '@/components/ui/textarea';
+import { mockCitizens } from '@/lib/data';
 
 export default function ProfilePage() {
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading: isUserLoading, updateUser } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
   const { toast } = useToast();
   
   const [name, setName] = useState('');
@@ -27,12 +26,11 @@ export default function ProfilePage() {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const userProfileRef = useMemoFirebase(() => {
+  const userProfile = useMemo(() => {
     if (!user) return null;
-    return doc(firestore, 'citizens', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<Citizen>(userProfileRef);
+    // In a real app, you'd fetch this. Here we find it in mock data.
+    return mockCitizens.find(c => c.id === user.id) || user;
+  }, [user]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -53,19 +51,19 @@ export default function ProfilePage() {
   const handleSave = async () => {
       if (!user) return;
       setIsSaving(true);
-      const userRef = doc(firestore, 'citizens', user.uid);
-      try {
-        await updateDoc(userRef, { name, phone, address, city, state });
+      
+      // Simulate API call
+      setTimeout(() => {
+        const updatedUser = { ...user, name, phone, address, city, state };
+        updateUser(updatedUser); // Update context
+        // In a real app, you would also update your backend.
+        // For mock data, we could update the array, but that's complex without a state management library.
         toast({ title: 'Success', description: 'Profile updated successfully.' });
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to update profile.' });
-        console.error("Error updating profile: ", error);
-      } finally {
-          setIsSaving(false);
-      }
+        setIsSaving(false);
+      }, 1000);
   }
 
-  const isLoading = isUserLoading || isProfileLoading;
+  const isLoading = isUserLoading;
 
   if (isLoading || !userProfile) {
      return (

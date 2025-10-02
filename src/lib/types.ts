@@ -63,3 +63,20 @@ export type Admin = {
     department?: ReportCategory; // Department admins are linked to a report category
     dateJoined: string; // ISO string
 }
+
+
+// A generic user type for the auth context
+export type User = {
+  id: string;
+  janId: string;
+  name: string;
+  email: string;
+  phone: string;
+  dateJoined: string;
+  dob?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  role?: AdminRole;
+  department?: ReportCategory;
+}

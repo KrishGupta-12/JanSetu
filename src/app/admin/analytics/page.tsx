@@ -1,11 +1,9 @@
 'use client'
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
 import { Report, ReportCategory, ReportStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { useMemo } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { mockReports } from '@/lib/data';
 
 const statusColors: {[key in ReportStatus]: string} = {
     [ReportStatus.Pending]: '#FBBF24', // amber-400
@@ -23,16 +21,9 @@ const categoryColors: {[key in ReportCategory]: string} = {
 
 
 export default function AnalyticsPage() {
-    const firestore = useFirestore();
-    const reportsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'issue_reports');
-    }, [firestore]);
-
-    const { data: reports, isLoading } = useCollection<Report>(reportsQuery);
+    const reports = mockReports;
 
     const reportsByStatus = useMemo(() => {
-        if (!reports) return [];
         const counts = Object.values(ReportStatus).reduce((acc, status) => {
             acc[status] = 0;
             return acc;
@@ -47,7 +38,6 @@ export default function AnalyticsPage() {
     }, [reports]);
 
      const reportsByCategory = useMemo(() => {
-        if (!reports) return [];
         const counts = Object.values(ReportCategory).reduce((acc, category) => {
             acc[category] = 0;
             return acc;
@@ -60,18 +50,6 @@ export default function AnalyticsPage() {
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
 
     }, [reports]);
-
-    if (isLoading) {
-        return (
-            <div className="space-y-6">
-                 <Skeleton className="h-10 w-1/3" />
-                 <div className="grid gap-6 md:grid-cols-2">
-                    <Skeleton className="h-80 w-full" />
-                    <Skeleton className="h-80 w-full" />
-                 </div>
-            </div>
-        )
-    }
 
 
     return (

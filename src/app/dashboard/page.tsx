@@ -13,15 +13,15 @@ import MapView from '@/components/home/MapView';
 import AqiCard from '@/components/home/AqiCard';
 import DisasterAlert from '@/components/home/DisasterAlert';
 import { MapProvider } from '@/components/home/MapProvider';
-import { useUser, useCollection, useMemoFirebase, useFirestore, useDoc } from '@/firebase';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { collection, doc } from 'firebase/firestore';
-import { Report, Admin as AdminType } from '@/lib/types';
+import { Report } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ReportStatus } from '@/lib/types';
+import { mockReports, mockAdmins } from '@/lib/data';
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -31,34 +31,30 @@ const statusStyles: { [key in ReportStatus]: string } = {
 
 
 export default function DashboardPage() {
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
-  const userReportsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return collection(firestore, 'users', user.uid, 'issue_reports');
-  }, [user, firestore]);
+  const userReports = useMemo(() => {
+    if (!user) return [];
+    return mockReports.filter(report => report.citizenId === user.id);
+  }, [user]);
 
-  const { data: userReports, isLoading: areReportsLoading } = useCollection<Report>(userReportsQuery);
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    return mockAdmins.some(admin => admin.email === user.email);
+  }, [user]);
 
-  const adminRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'admins', user.uid);
-  }, [firestore, user]);
-
-  const { data: adminData, isLoading: isAdminLoading } = useDoc<AdminType>(adminRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-     if (!isUserLoading && !isAdminLoading && user && adminData) {
+     if (!isUserLoading && user && isAdmin) {
       router.push('/admin'); // Redirect admins to admin dashboard
     }
-  }, [user, adminData, isUserLoading, isAdminLoading, router]);
+  }, [user, isAdmin, isUserLoading, router]);
 
-  if (isUserLoading || areReportsLoading || !user || adminData) {
+  if (isUserLoading || !user || isAdmin) {
     return (
        <div className="flex-1 w-full p-4 sm:p-6">
         <div className="container mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6 h-full">

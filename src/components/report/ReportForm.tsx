@@ -33,7 +33,7 @@ import { submitReport, type FormState } from '@/lib/actions';
 import { ReportCategory } from '@/lib/types';
 import { reportCategories } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase';
+import { useAuth } from '@/hooks/useAuth';
 
 const reportFormSchema = z.object({
   category: z.nativeEnum(ReportCategory, {
@@ -65,7 +65,7 @@ function SubmitButton() {
 }
 
 export default function ReportForm() {
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
   const [formState, dispatch] = useFormState(submitReport, initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -88,9 +88,14 @@ export default function ReportForm() {
 
   useEffect(() => {
     if (!isUserLoading && !user) {
+        toast({
+            title: "Authentication Required",
+            description: "Please log in to report an issue.",
+            variant: "destructive"
+        })
         router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, toast]);
 
   useEffect(() => {
     if (formState.status === 'success') {
@@ -149,6 +154,7 @@ export default function ReportForm() {
     <>
       <Form {...form}>
         <form ref={formRef} action={dispatch} className="space-y-8">
+           <input type="hidden" name="citizenId" value={user.id} />
           <FormField
             control={form.control}
             name="category"

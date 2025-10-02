@@ -48,9 +48,8 @@ import { ReportStatus, AdminRole } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { updateDoc } from 'firebase/firestore';
-import { doc, serverTimestamp, collection } from 'firebase/firestore';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { mockAdmins } from '@/lib/data';
+
 
 const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Pending]: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700',
@@ -58,7 +57,8 @@ const statusStyles: { [key in ReportStatus]: string } = {
   [ReportStatus.Resolved]: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
 };
 
-export default function ReportTable({ reports, admin }: { reports: Report[], admin: Admin }) {
+export default function ReportTable({ reports: initialReports, admin }: { reports: Report[], admin: Admin }) {
+  const [reports, setReports] = useState(initialReports);
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
@@ -66,22 +66,12 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   
   const { toast } = useToast();
-  const firestore = useFirestore();
 
-  const adminsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'admins');
-  }, [firestore]);
-  const { data: allAdmins } = useCollection<Admin>(adminsQuery);
+  const allAdmins = mockAdmins;
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
-    if(!firestore) return;
-    const reportRef = doc(firestore, 'issue_reports', reportId);
-    updateDoc(reportRef, { status, updatedAt: serverTimestamp() });
-
-    const userReportRef = doc(firestore, `users/${reports.find(r => r.id === reportId)?.citizenId}/issue_reports`, reportId);
-     updateDoc(userReportRef, { status, updatedAt: serverTimestamp() });
-     
+    // This would be an API call in a real app
+    setReports(prevReports => prevReports.map(r => r.id === reportId ? {...r, status} : r));
     toast({
       title: 'Status Updated',
       description: `Report status changed to ${status}.`
@@ -89,22 +79,13 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
   }
 
   const handleAssignAdmin = (reportId: string, admin: Admin) => {
-    if(!firestore) return;
-    const reportRef = doc(firestore, 'issue_reports', reportId);
-    updateDoc(reportRef, { 
-      assignedAdminId: admin.id,
-      assignedAdminName: admin.name,
-      status: ReportStatus.InProgress, 
-      updatedAt: serverTimestamp() 
-    });
-
-    const userReportRef = doc(firestore, `users/${reports.find(r => r.id === reportId)?.citizenId}/issue_reports`, reportId);
-    updateDoc(userReportRef, { 
-      assignedAdminId: admin.id,
-      assignedAdminName: admin.name,
-      status: ReportStatus.InProgress,
-      updatedAt: serverTimestamp()
-     });
+    // This would be an API call in a real app
+     setReports(prevReports => prevReports.map(r => r.id === reportId ? {
+        ...r, 
+        assignedAdminId: admin.id,
+        assignedAdminName: admin.name,
+        status: ReportStatus.InProgress, 
+      } : r));
 
      toast({
       title: 'Report Assigned',
@@ -290,7 +271,7 @@ export default function ReportTable({ reports, admin }: { reports: Report[], adm
                         <div>
                              <p className="text-sm font-medium text-muted-foreground mb-2">Image</p>
                              <div className="relative h-64 w-full rounded-md overflow-hidden border">
-                                <Image src={selectedReport.imageUrl} alt="Report Image" layout="fill" objectFit="cover" />
+                                <Image src={selectedReport.imageUrl} alt="Report Image" fill objectFit="cover" />
                              </div>
                         </div>
                     )}

@@ -3,33 +3,28 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Logo from './Logo';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { getAuth, signOut } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '../ui/skeleton';
 import { LogOut, UserCircle } from 'lucide-react';
-import { doc } from 'firebase/firestore';
+import { useMemo } from 'react';
+import { mockAdmins } from '@/lib/data';
 
 function HeaderAuth() {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
+  const { user, isLoading, logout } = useAuth();
   const router = useRouter();
 
-  const adminRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'admins', user.uid);
-  }, [firestore, user]);
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    return mockAdmins.some(admin => admin.email === user.email);
+  }, [user]);
 
-  const { data: adminData } = useDoc(adminRef);
-  const isAdmin = !!adminData;
-
-  const handleSignOut = async () => {
-    const auth = getAuth();
-    await signOut(auth);
+  const handleSignOut = () => {
+    logout();
     router.push('/');
   };
 
-  if (isUserLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center space-x-2">
         <Skeleton className="h-8 w-20 rounded-md" />

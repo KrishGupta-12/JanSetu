@@ -3,7 +3,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/common/Header';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { AuthProvider } from '@/hooks/useAuth';
 
 export const metadata: Metadata = {
   title: 'JanSetu - Civic Reporting Platform',
@@ -26,11 +26,11 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
-        <FirebaseClientProvider>
+        <AuthProvider>
           <Header />
           <main className="flex-1 flex flex-col">{children}</main>
           <Toaster />
-        </FirebaseClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );

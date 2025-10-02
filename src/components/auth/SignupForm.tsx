@@ -6,11 +6,6 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { FirebaseError } from 'firebase/app';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-
-import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -19,10 +14,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
-import { generateJanId } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -36,8 +32,7 @@ const formSchema = z.object({
 
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const auth = useAuth();
-  const firestore = useFirestore();
+  const { signup } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -52,60 +47,27 @@ export function SignupForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    if (!auth || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Firebase not initialized. Please try again later.',
-      });
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const newUser = userCredential.user;
+    
+    // Simulate API call
+    setTimeout(() => {
+      const result = signup(values.name, values.email, values.password);
 
-      const janId = await generateJanId(firestore, 'citizen');
-
-      // Corrected: Use the 'citizens' collection
-      const citizenRef = doc(firestore, 'citizens', newUser.uid);
-      
-      // Corrected: Include all required fields for the Citizen entity
-      await setDoc(citizenRef, {
-        id: newUser.uid,
-        janId,
-        name: values.name,
-        email: values.email,
-        phone: '', // Initialize phone as empty string
-        dateJoined: new Date().toISOString(),
-        address: '',
-        city: '',
-        state: '',
-        dob: ''
-      });
-
-      router.push('/dashboard');
-      toast({
-        title: 'Welcome!',
-        description: 'Your account has been created.',
-      });
-    } catch (error) {
-      let errorMessage = 'An unexpected error occurred.';
-      if (error instanceof FirebaseError) {
-        if (error.code === 'auth/email-already-in-use') {
-          errorMessage = 'This email is already registered. Please log in.';
-        } else {
-          errorMessage = `Failed to create an account: ${error.message}`;
-        }
+      if (result.success) {
+        router.push('/dashboard');
+        toast({
+          title: 'Welcome!',
+          description: 'Your account has been created.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign Up Failed',
+          description: result.message,
+        });
       }
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: errorMessage,
-      });
-    } finally {
+
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (

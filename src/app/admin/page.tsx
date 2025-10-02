@@ -1,44 +1,38 @@
 'use client';
 import ReportTable from '@/components/admin/ReportTable';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, query, where } from 'firebase/firestore';
-import { useCollection } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { Report, ReportStatus, Admin as AdminType, AdminRole } from '@/lib/types';
+import { Report, ReportStatus, AdminRole } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ListChecks, Hourglass, Loader, FileText } from 'lucide-react';
+import { mockReports, mockAdmins } from '@/lib/data';
 
 export default function AdminDashboardPage() {
-  const { user, isUserLoading } = useUser();
+  const { user, isLoading: isUserLoading } = useAuth();
   const router = useRouter();
-  const firestore = useFirestore();
 
-  const adminRef = useMemoFirebase(() => {
+  const adminData = useMemo(() => {
     if (!user) return null;
-    return doc(firestore, 'admins', user.uid);
-  }, [firestore, user]);
+    return mockAdmins.find(admin => admin.email === user.email);
+  }, [user]);
 
-  const { data: adminData, isLoading: isAdminLoading } = useDoc<AdminType>(adminRef);
-
-  const reportsQuery = useMemoFirebase(() => {
-      if (!firestore || !adminData) return null;
-      if (adminData.role === AdminRole.SuperAdmin) {
-        return collection(firestore, 'issue_reports');
-      } else {
-        return query(collection(firestore, 'issue_reports'), where('assignedAdminId', '==', user?.uid));
-      }
-  }, [firestore, adminData, user?.uid]);
-
-  const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
+  const reports = useMemo(() => {
+    if (!adminData) return [];
+    if (adminData.role === AdminRole.SuperAdmin) {
+      return mockReports;
+    } else {
+      return mockReports.filter(report => report.assignedAdminId === adminData.id);
+    }
+  }, [adminData]);
+  
 
   useEffect(() => {
-    if (!isUserLoading && !isAdminLoading && (!user || !adminData)) {
+    if (!isUserLoading && (!user || !adminData)) {
       router.push('/dashboard'); 
     }
-  }, [user, adminData, isUserLoading, isAdminLoading, router]);
+  }, [user, adminData, isUserLoading, router]);
   
   const reportStats = useMemo(() => {
     if (!reports) {
@@ -53,7 +47,7 @@ export default function AdminDashboardPage() {
   }, [reports]);
 
 
-  const isLoading = isUserLoading || isAdminLoading || areReportsLoading;
+  const isLoading = isUserLoading;
 
   if (isLoading || !user || !adminData) {
      return (
