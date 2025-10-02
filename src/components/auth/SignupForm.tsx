@@ -78,20 +78,33 @@ export function SignupForm() {
 
   const runSeed = useCallback(async () => {
     if (auth && firestore) {
+      // Temporarily disable persistence to avoid interfering with current user state
       await seedAdminUsers(auth, firestore);
     }
     setIsSeeding(false);
   }, [auth, firestore]);
 
+
   useEffect(() => {
-    // Check if seeding has been run in this session
-    if (sessionStorage.getItem('seeding_run') !== 'true') {
-        runSeed();
-        sessionStorage.setItem('seeding_run', 'true');
-    } else {
-        setIsSeeding(false);
+    // This effect should only redirect if the user is already logged in when visiting the page.
+    if (!isUserLoading && user) {
+        // A user is already logged in, redirect them.
+        router.push('/dashboard');
+        return;
     }
-  }, [runSeed]);
+    
+    // If no user and not loading, proceed to check for seeding.
+    if (!isUserLoading && !user) {
+        if (sessionStorage.getItem('seeding_run') !== 'true') {
+            runSeed();
+            sessionStorage.setItem('seeding_run', 'true');
+        } else {
+            setIsSeeding(false);
+        }
+    }
+
+  }, [user, isUserLoading, router, runSeed]);
+
 
   useEffect(() => {
     if (dobDay && dobMonth && dobYear) {
@@ -99,21 +112,6 @@ export function SignupForm() {
       form.clearErrors('dob');
     }
   }, [dobDay, dobMonth, dobYear, form]);
-
-  useEffect(() => {
-    // This effect should only redirect if the user is already logged in when visiting the page.
-    if (!isUserLoading && user) {
-      const checkAdmin = async () => {
-          const adminDoc = await getDoc(doc(firestore, 'admins', user.uid));
-          if(adminDoc.exists()) {
-              router.push('/admin');
-          } else {
-              router.push('/dashboard');
-          }
-      }
-      checkAdmin();
-    }
-  }, [user, isUserLoading, router, firestore]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
@@ -181,11 +179,11 @@ export function SignupForm() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 100 }, (_, i) => (currentYear - 18 - i).toString());
   
-  if (isSeeding) {
+  if (isUserLoading || isSeeding) {
     return (
         <div className="flex flex-col items-center justify-center space-y-4 p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Setting up admin accounts...</p>
+            <p className="text-muted-foreground">Loading...</p>
         </div>
     )
   }
