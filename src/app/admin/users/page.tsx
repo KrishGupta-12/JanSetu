@@ -167,10 +167,13 @@ export default function UsersPage() {
   const { toast } = useToast();
   
   const citizensQuery = useMemoFirebase(() => {
-    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
+    // This query is now correctly gated. It will only execute if the user is a Super Admin.
+    if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) {
+      return null;
+    }
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore, adminUser]);
-  const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
+  const { data: citizens, isLoading: citizensLoading, error } = useCollection<UserProfile>(citizensQuery);
 
   const reportsQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
