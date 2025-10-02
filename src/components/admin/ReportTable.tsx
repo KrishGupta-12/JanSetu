@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import {
   Table,
   TableBody,
@@ -27,16 +28,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MoreHorizontal, Loader2, Sparkles } from 'lucide-react';
+import { MoreHorizontal, Loader2, Sparkles, Eye } from 'lucide-react';
 import type { Report } from '@/lib/types';
 import { ReportStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { summarizeAllReports } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase';
+import { updateDoc } from 'firebase/firestore';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
@@ -50,15 +59,23 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
   const [summary, setSummary] = useState('');
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
+  
   const { toast } = useToast();
   const firestore = useFirestore();
   
   const handleUpdateStatus = (reportId: string, status: ReportStatus) => {
+    if(!firestore) return;
     const reportRef = doc(firestore, 'issue_reports', reportId);
-    updateDocumentNonBlocking(reportRef, { status, updatedAt: serverTimestamp() });
+    updateDoc(reportRef, { status, updatedAt: serverTimestamp() });
+
+    const userReportRef = doc(firestore, `users/${reports.find(r => r.id === reportId)?.citizenId}/issue_reports`, reportId);
+     updateDoc(userReportRef, { status, updatedAt: serverTimestamp() });
+     
     toast({
       title: 'Status Updated',
-      description: `Report ${reportId} marked as ${status}.`
+      description: `Report status changed to ${status}.`
     });
   }
 
@@ -78,6 +95,11 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
     }
     setIsSummaryLoading(false);
   };
+  
+  const handleViewDetails = (report: Report) => {
+      setSelectedReport(report);
+      setIsDetailViewOpen(true);
+  }
 
   return (
     <>
@@ -130,7 +152,10 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDetails(report)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.InProgress)}>Mark as In Progress</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleUpdateStatus(report.id, ReportStatus.Resolved)}>Mark as Resolved</DropdownMenuItem>
@@ -149,7 +174,7 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>AI-Generated Report Summary</AlertDialogTitle>
-            <AlertDialogDescription className="text-foreground whitespace-pre-wrap">
+            <AlertDialogDescription className="text-foreground whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
               {summary}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -158,6 +183,61 @@ export default function ReportTable({ reports }: { reports: Report[] }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+        <DialogContent className="sm:max-w-lg">
+            {selectedReport && (
+                <>
+                <DialogHeader>
+                    <DialogTitle>Report Details</DialogTitle>
+                     <DialogDescription>
+                        <Badge className={cn('font-semibold mt-2', statusStyles[selectedReport.status])}>
+                            {selectedReport.status}
+                        </Badge>
+                     </DialogDescription>
+                </DialogHeader>
+                 <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                       <p className="col-span-1 text-sm font-medium text-muted-foreground">ID</p>
+                       <p className="col-span-3 text-sm">{selectedReport.id}</p>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                       <p className="col-span-1 text-sm font-medium text-muted-foreground">Category</p>
+                       <p className="col-span-3 text-sm">{selectedReport.category}</p>
+                    </div>
+                     <div className="grid grid-cols-4 items-start gap-4">
+                       <p className="col-span-1 text-sm font-medium text-muted-foreground pt-1">Description</p>
+                       <p className="col-span-3 text-sm">{selectedReport.description}</p>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                       <p className="col-span-1 text-sm font-medium text-muted-foreground">Location</p>
+                       <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${selectedReport.latitude},${selectedReport.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="col-span-3 text-sm text-primary hover:underline"
+                        >
+                           {selectedReport.latitude}, {selectedReport.longitude}
+                       </a>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                       <p className="col-span-1 text-sm font-medium text-muted-foreground">Reported On</p>
+                       <p className="col-span-3 text-sm">{new Date(selectedReport.reportDate).toLocaleString()}</p>
+                    </div>
+
+                    {selectedReport.imageUrl && (
+                        <div>
+                             <p className="text-sm font-medium text-muted-foreground mb-2">Image</p>
+                             <div className="relative h-64 w-full rounded-md overflow-hidden border">
+                                <Image src={selectedReport.imageUrl} alt="Report Image" layout="fill" objectFit="cover" />
+                             </div>
+                        </div>
+                    )}
+                 </div>
+                </>
+            )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

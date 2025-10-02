@@ -3,9 +3,9 @@
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { summarizeReports } from '@/ai/flows/summarize-reports';
-import { ReportCategory } from './types';
+import { ReportCategory, ReportStatus } from './types';
 import { getAuth } from 'firebase/auth/web-extension';
-import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getFirestore, collection, getDocs, serverTimestamp, addDoc, doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
@@ -72,15 +72,18 @@ export async function submitReport(
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         imageUrl: moderatedPhotoUri || '',
-        reportDate: serverTimestamp(),
-        status: 'Pending',
+        reportDate: new Date().toISOString(),
+        status: ReportStatus.Pending,
+        updatedAt: serverTimestamp()
     };
-
+    
+    // Add to main issue_reports collection
     const issueReportsCollection = collection(firestore, 'issue_reports');
     const newReportRef = await addDoc(issueReportsCollection, reportData);
 
+    // Also add to the user-specific subcollection
     const userIssueReportRef = doc(firestore, `users/${citizenId}/issue_reports`, newReportRef.id);
-    await setDoc(userIssueReportRef, reportData);
+    await setDoc(userIssueReportRef, { ...reportData, id: newReportRef.id });
 
 
     return {
