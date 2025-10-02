@@ -75,7 +75,7 @@ export default function LeaderboardPage() {
         return users.map(u => ({
             ...u,
             // Calculate score based on the fields from the user document
-            score: ((u.resolvedReports || 0) * 5) + (u.totalReports || 0),
+            score: ((u.resolvedReports ?? 0) * 5) + (u.totalReports ?? 0),
         })).sort((a, b) => b.score - a.score);
 
     }, [users]);
@@ -155,7 +155,7 @@ export default function LeaderboardPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium">
-                                                    {entry.resolvedReports || 0} / {entry.totalReports || 0}
+                                                    {entry.resolvedReports ?? 0} / {entry.totalReports ?? 0}
                                                 </TableCell>
                                             </TableRow>
                                         )
