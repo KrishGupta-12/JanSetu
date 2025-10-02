@@ -32,7 +32,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { add } from 'date-fns';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, orderBy } from 'firebase/firestore';
+import { collection, query, doc, orderBy, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type EnrichedCitizen = UserProfile & {
@@ -81,12 +81,12 @@ function UserTableSkeleton() {
 export default function UsersPage() {
   const { user: adminUser, isLoading: isUserLoading, firestore } = useAuth();
   const { toast } = useToast();
-
-  const usersQuery = useMemoFirebase(() => {
+  
+  const citizensQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
     return query(collection(firestore, 'users'), where('role', '==', 'citizen'), orderBy('dateJoined', 'desc'));
   }, [firestore, adminUser]);
-  const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: citizens, isLoading: citizensLoading } = useCollection<UserProfile>(citizensQuery);
 
   const reportsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -146,7 +146,7 @@ export default function UsersPage() {
     { label: '1 Year', duration: { years: 1 } },
     { label: '3 Years', duration: { years: 3 } },
     { label: '5 Years', duration: { years: 5 } },
-    { label: 'Lifetime', duration: 'lifetime' },
+    { label: 'Lifetime', duration: 'lifetime' as const },
   ];
 
   const isLoadingPage = isUserLoading || citizensLoading || reportsLoading;
@@ -246,7 +246,7 @@ export default function UsersPage() {
                                     <DropdownMenuLabel>Select Duration</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     {banDurations.map(d => (
-                                      <DropdownMenuItem key={d.label} onClick={() => handleBan(citizen.uid, d.duration as any)}>
+                                      <DropdownMenuItem key={d.label} onClick={() => handleBan(citizen.uid, d.duration)}>
                                         {d.label}
                                       </DropdownMenuItem>
                                     ))}
@@ -267,3 +267,5 @@ export default function UsersPage() {
     </div>
   );
 }
+
+    
