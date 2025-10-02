@@ -49,7 +49,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const userReportsQuery = useMemoFirebase(
-    () => user && firestore ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
+    () => (user && firestore && user.role === UserRole.Citizen) ? query(collection(firestore, 'issueReports'), where('citizenId', '==', user.uid)) : null,
     [user, firestore]
   );
   const { data: userReports, isLoading: isReportsLoading } = useCollection<Report>(userReportsQuery);
@@ -81,7 +81,7 @@ export default function ProfilePage() {
     }
   }, [user, isUserLoading, router]);
 
-  const isLoading = isUserLoading || isReportsLoading;
+  const isLoading = isUserLoading || (user?.role === UserRole.Citizen && isReportsLoading);
 
   if (isLoading || !user) {
      return (
@@ -111,19 +111,22 @@ export default function ProfilePage() {
                             Welcome, {user.name}!
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center gap-4 p-4 rounded-lg bg-secondary">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${contribution.color}`}>
-                                {contribution.icon}
+                    {user.role === UserRole.Citizen && (
+                        <CardContent>
+                            <div className="flex items-center gap-4 p-4 rounded-lg bg-secondary">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${contribution.color}`}>
+                                    {contribution.icon}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-lg">{contribution.level}</p>
+                                    <p className="text-sm text-muted-foreground">Contribution Score: {userStats.score}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-bold text-lg">{contribution.level}</p>
-                                <p className="text-sm text-muted-foreground">Contribution Score: {userStats.score}</p>
-                            </div>
-                        </div>
-                    </CardContent>
+                        </CardContent>
+                    )}
                 </Card>
 
+                {user.role === UserRole.Citizen && (
                  <Card>
                     <CardHeader>
                         <CardTitle>My Contributions</CardTitle>
@@ -136,6 +139,7 @@ export default function ProfilePage() {
                         <ContributionCard title="Rejected" value={userStats.rejected} icon={<ShieldX className="h-4 w-4 text-muted-foreground" />} />
                     </CardContent>
                 </Card>
+                )}
             </div>
             
             {/* Sidebar with Profile Form */}
