@@ -6,19 +6,21 @@ import { useState, useEffect } from 'react';
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
   const [isClient, setIsClient] = useState(false);
-  // It's important to access environment variables only on the client-side for `NEXT_PUBLIC_` vars
-  // to be available after the initial server render.
   const [apiKey, setApiKey] = useState<string | undefined>(undefined);
 
   useEffect(() => {
+    // This effect runs only on the client side.
     setIsClient(true);
     setApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
   }, []);
 
+  // While waiting for the client to mount and the API key to be read, show a skeleton.
   if (!isClient) {
     return <Skeleton className="w-full h-full" />;
   }
 
+  // If the client has mounted but the API key is not available, show an error message.
+  // This prevents rendering the APIProvider with an undefined key.
   if (!apiKey) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-muted/50 p-4">
@@ -35,5 +37,6 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Only render the APIProvider when we have a valid key.
   return <APIProvider apiKey={apiKey}>{children}</APIProvider>;
 }
