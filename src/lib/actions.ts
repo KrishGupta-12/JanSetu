@@ -3,7 +3,8 @@
 import { z } from 'zod';
 import { moderateImage } from '@/ai/flows/image-moderation';
 import { summarizeReports } from '@/ai/flows/summarize-reports';
-import { ReportCategory } from './types';
+import { classifyReport } from '@/ai/flows/classify-report';
+import { ReportCategory, ReportUrgency } from './types';
 import { mockReports } from './data';
 
 const reportSchema = z.object({
@@ -41,18 +42,29 @@ export async function submitReport(
     };
   }
 
-  const { photo } = validatedFields.data;
+  const { photo, description } = validatedFields.data;
 
   try {
+    let moderatedPhotoDataUri: string | undefined = undefined;
     if (photo && photo.startsWith('data:image')) {
       // In a real app, we would use the moderated image.
       // For now, we just call the flow to show it's connected.
-      await moderateImage({ photoDataUri: photo });
+      const moderationResult = await moderateImage({ photoDataUri: photo });
+      moderatedPhotoDataUri = moderationResult.moderatedPhotoDataUri;
     }
+    
+    // AI Classification
+    const classificationResult = await classifyReport({ description });
+
 
     // In a real app, this is where you'd save the report to the database.
     // We'll just log it to the console and return success.
-    console.log('Mock Report Submitted:', validatedFields.data);
+    console.log('Mock Report Submitted:', {
+        ...validatedFields.data,
+        imageUrl: moderatedPhotoDataUri || validatedFields.data.photo,
+        category: classificationResult.category, // Using AI classified category
+        urgency: classificationResult.urgency, // Using AI classified urgency
+    });
 
     // Simulate a delay
     await new Promise(resolve => setTimeout(resolve, 1000));
