@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { UserProfile, UserRole } from '@/lib/types';
+import { UserProfile, UserRole, Report, ReportStatus } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -64,11 +64,16 @@ export default function UsersPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !adminUser || adminUser.role !== UserRole.SuperAdmin) return null;
-    // Query for all users that are citizens
     return query(collection(firestore, 'users'), where('role', '==', UserRole.Citizen));
   }, [firestore, adminUser]);
 
+  const reportsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'issueReports'));
+  }, [firestore]);
+
   const { data: users, isLoading: areUsersLoading, error } = useCollection<UserProfile>(usersQuery);
+  const { data: reports, isLoading: areReportsLoading } = useCollection<Report>(reportsQuery);
 
   const handleOpenManageDialog = (user: UserProfile) => {
     setSelectedUser(user);
@@ -169,6 +174,11 @@ export default function UsersPage() {
                   ) : users && users.length > 0 ? (
                     users.map((user) => {
                       const isBanned = user.bannedUntil && new Date(user.bannedUntil) > new Date();
+                      
+                      const userReports = reports?.filter(r => r.citizenId === user.uid) || [];
+                      const totalReports = userReports.length;
+                      const resolvedReports = userReports.filter(r => r.status === ReportStatus.Resolved).length;
+
                       return (
                         <TableRow key={user.uid}>
                           <TableCell>
@@ -195,7 +205,7 @@ export default function UsersPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {user.resolvedReports ?? 0} / {user.totalReports ?? 0}
+                            {resolvedReports} / {totalReports}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" onClick={() => handleOpenManageDialog(user)}>
